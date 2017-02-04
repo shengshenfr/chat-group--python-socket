@@ -279,10 +279,42 @@ for opt, arg in opts :
         sys.exit()
 
 '''
-#!/usr/bin/env python  
-      
-import sys  
-import getopt  
-      
+import getopt,sys
+def usage():
+    """
+    The output  configuration file contents.
 
+    Usage: config.py  [-h|--help] [-s|--string] [-n|--number] [output, =[argument]]
 
+    Ecrire un programme qui accepte trois drapeaux :
+    - -h / --help : affiche laide au lancement du programme
+    - -s / --string : attend alors en parametre une chaine de caracteres
+    - -n / --number : attend alors en parametre un nombre entier
+
+    """
+
+def getopttest():
+    try:
+        options,args = getopt.getopt(sys.argv[1:],"hs:n:",["help","string=","number="])
+    except getopt.GetoptError as err:
+        print str(err)
+        print usage.__doc__
+        sys.exit(1)
+    for o,a in options:
+        if o in ("-s","--string") and a in ("-n","--number"):
+            if (a>len(o)):
+                break
+
+            print(o[n-1])
+     
+        elif o in ("-h","--help"):
+            print usage.__doc__
+
+            sys.exit()
+
+        else:
+            print "Using the wrong way,please view the help information."
+            
+            
+if __name__ == "__main__":
+    getopttest()
