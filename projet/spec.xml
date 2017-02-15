@@ -1,0 +1,927 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!-- This template is for creating an Internet Draft using xml2rfc,
+     which is available here: http://xml.resource.org. -->
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
+<!-- One method to get references from the online citation libraries.
+     There has to be one entity for each item to be referenced. 
+     An alternate method (rfc include) is described in the references. -->
+
+<!ENTITY RFC2629 SYSTEM "http://xml.resource.org/public/rfc/bibxml/reference.RFC.2629.xml">
+]>
+<?xml-stylesheet type='text/xsl' href='rfc2629.xslt' ?>
+<!-- used by XSLT processors -->
+<!-- For a complete list and description of processing instructions (PIs), 
+     please see http://xml.resource.org/authoring/README.html. -->
+<!-- Below are generally applicable Processing Instructions (PIs) that most I-Ds might want to use.
+     (Here they are set differently than their defaults in xml2rfc v1.32) -->
+<?rfc strict="yes" ?>
+<!-- give errors regarding ID-nits and DTD validation -->
+<!-- control the table of contents (ToC) -->
+<?rfc toc="yes"?>
+<!-- generate a ToC -->
+<?rfc tocdepth="4"?>
+<!-- the number of levels of subsections in ToC. default: 3 -->
+<!-- control references -->
+<?rfc symrefs="yes"?>
+<!-- use symbolic references tags, i.e, [RFC2119] instead of [1] -->
+<?rfc sortrefs="yes" ?>
+<!-- sort the reference entries alphabetically -->
+<!-- control vertical white space 
+     (using these PIs as follows is recommended by the RFC Editor) -->
+<?rfc compact="yes" ?>
+<!-- do not start each main section on a new page -->
+<?rfc subcompact="yes" ?>
+<!-- do not display copyright and other IETF-related stuff -->
+<?rfc private="RES302" ?>
+<?rfc private="Destinataire : EL JAOUHARI Sadd " ?>
+<?rfc private="Version 1.0" ?>
+<rfc category="info"  ipr="trust200902">
+  <!-- category values: std, bcp, info, exp, and historic
+     ipr values: full3667, noModification3667, noDerivatives3667
+     you can add the attributes updates="NNNN" and obsoletes="NNNN" 
+     they will automatically be output with "(if approved)" -->
+
+  <!-- ***** FRONT MATTER ***** -->
+
+  <front>
+    <!-- The abbreviated title is used in the page header - it is only necessary if the 
+         full title is longer than 39 characters -->
+
+    <title abbrev="Sp&#233;cification du Protocole">Sp&#233;cification du Protocole(Version 1.0)
+    </title>
+
+    <!-- add 'role="editor"' below for the editors if appropriate -->
+
+    
+    <author fullname="Sheng SHEN" initials="S.SHEN."
+            surname="SHEN">
+      <organization>Télécom Bretagne</organization>
+
+      <address>
+        <postal>
+          <street></street>
+
+          <!-- Reorder these if your country does things differently -->
+
+          <city>Brest</city>
+
+          <region></region>
+
+          <code></code>
+
+          <country>France</country>
+        </postal>
+        <email>sheng.shen@telecom-bretagne.eu</email>
+
+        <!-- uri and facsimile elements may also be added -->
+      </address>
+    </author>
+    
+
+    <date month="Février" year="2017" />
+
+    <!-- If the month and year are both specified and are the current ones, xml2rfc will fill 
+         in the current day for you. If only the current year is specified, xml2rfc will fill 
+	 in the current day and month for you. If the year is not the current one, it is 
+	 necessary to specify at least a month (xml2rfc assumes day="1" if not specified for the 
+	 purpose of calculating the expiry date).  With drafts it is normally sufficient to 
+	 specify just the year. -->
+
+    <keyword>spec</keyword>
+
+    <!-- Keywords will be incorporated into HTML output
+         files in a meta tag but they have no effect on text or nroff
+         output. If you submit your draft to the RFC Editor, the
+         keywords will be used for the search engine. -->
+
+    <abstract >
+      <t>Ce protocole permet de mettre en œuvre un système de messagerie instantanée 
+         entre les clients et le serveur pour que ces derniers puissent se connecter 
+         et échanger des messages.</t>
+    </abstract>
+  </front>
+
+  <middle>
+    <section title="Introduction">
+      <t>L'objectif du protocole est de permettre aux utilisateurs de se connecter à un serveur et 
+         pouvoir échanger des messages. Il permet aussi de créer une messagerie privée ainsi que 
+         participer à la messagerie, et puisque des utilisateurs peuvent initier une messagerie privée,
+         en choisissant les deux modes, centralisé ou décentralisé pour les messageries privées.</t>
+
+    </section>
+
+    <section title="Description">
+        <section title="Contraintes">
+    <t>    
+    On utilise une unique trame pour chaque message, et ce protocole devra fonctionner au-dessus d'UDP.
+    Toutes les adresses IP doivent être des adresses IPv4 valides.</t>
+    <texttable anchor="tableau" title="Value maximum ">
+          <preamble> Ce tableau définit la longueur maximale de quelques éléments. </preamble>
+
+          <ttcol align="center">élément</ttcol>
+
+          <ttcol align="center">taille</ttcol>
+
+          <c>nombre de client</c>
+
+          <c>1024</c>
+
+          <c>caractères du nom de client</c>
+
+          <c>20</c>
+
+          <c>Text message</c>
+
+          <c>1024 bytes</c>
+
+          <c>nombre de messagerie simultané</c>
+
+          <c>100</c>
+
+          <c>nombre de limtation d'une messagerie</c>
+
+          <c>100</c>
+        </texttable>    
+        </section>
+    <section title="Format de 1er Paquet ">
+    <t>
+        Dans ce protocole, le format de paquet n'est pas le même pour tous les
+        messages.  En fait, il existe trois formats de paquet en fonction du rôle 
+        qu'ils jouent dans les échanges entre le serveur et les clients.
+    </t>
+
+    <t>
+    <figure align="center" anchor="sample_pkt">
+    <artwork>
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |numéro de séquence|  type         |  texte length     |        |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+         |
+ |                                                               |
+ .                                                               .
+ .                       Text(length variable)                   .
+ .                                                               .
+ |                                                               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+        </artwork></figure></t>
+
+       
+        <t>
+        Numéro de séquence (10 bits)
+        Ce champ définie le numéro de séquence du message. Pour chaque client ou le serveur,
+        nous définissons un numéro de séquence unique qui augmente lors de l'envoi d'un 
+        paquet de message ou la réponse d'un paquet de message (pour un type donné, l'expéditeur
+        soit le client soit le serveur, incrémente le numéro de séquence chaque fois qu'il 
+        envoie un nouveau paquet).
+
+        </t>
+        <t>
+        Type (8 bits)
+        Définir le type de message. Ce champ doit contenir une value correcte ci-dessous.
+        </t>
+        <t>
+        Texte Length (10 bits)
+        Définir la longueur de message en byte. Un émetteur doit assurer que ce champ
+        contient une value correcte.
+        </t>
+        <t>
+        Texte (length variable):
+        Définir le contenu de messsage. 
+        </t>
+
+
+      
+    <section title="type = 1 (0x01): Connexion">
+    <t>
+    Envoyé depuis un client vers le serveur. 
+    Le champ de texte doit être TEXTE (nom d'utilisateur) &lt;CRLF&gt;
+    </t>
+    </section>
+
+    <section title="type = 2 (0x02): ConnexionInvalide (Nom de client déjà utilisé)">
+        <t>
+        Envoyé depuis le serveur vers un client. Lorsqu'un client se connecte et indique son nom, 
+        mais ce nom est déjà utilisé, le serveur indique une connexion invalide. 
+        Le champ de texte doit être TEXTE (nom de client déjà utilisé) &lt;CRLF&gt;.
+
+        </t>
+    </section>
+
+    <section title="type = 3 (0x03): Déconnexion">
+        <t>
+        Envoyé depuis un client vers le serveur. Ce message indique la volonté d'un 
+        utilisateur de quitter le service de message instantané.
+        Le champ de texte doit être TEXTE (nom d'utilisateur) &lt;CRLF&gt;
+        </t>
+    </section>
+    <section title="type = 4 (0x04): Demande de liste">
+        <t>
+        Envoyé depuis un client vers le serveur. Ce message demande la liste des utilisateurs 
+        actuellement connectés au serveur. Le champ de texte doit être vide.
+        </t>
+    </section>
+    <section title="type = 5 (0x05): Accepter une invitation">
+        <t>
+        Envoyé depuis un client vers le serveur pour indiquer son acception de participer à une
+        messagerie privée. Le champ de texte doit être vide.
+            
+        </t>
+    </section>
+    
+    <section title="type = 6 (0x06): Refuser une invitation">
+        <t>
+        Envoyé depuis un client vers le serveur pour indiquer son refus de participer à une 
+        messagerie privée. Le champ de texte doit être vide.
+            
+        </t>
+    </section>
+    <section title="type = 7 (0x07): Quitter une messagerie">
+        <t>
+        Envoyé depuis un client vers le serveur pour indique la volonté d'un utilisateur de quitter
+        une messagerie instantané. Le champ de texte doit être vide.
+        </t>
+    </section>
+
+
+ 
+      <section title="type = 8 (0x08): Réponse de récepteur (ACK)">
+        <t>
+        Indique qu'un message a été reçu. L'ACK doit être envoyé quand le récepteur reçoit un message.
+        Le champ de texte doit être vide.
+        </t>
+    </section>
+
+    <section title="type = 9 (0x09): Serveur diffuse un message">
+        <t>
+        Lorsqu'un client envoie un message texte au serveur, le serveur devra le diffuser à 
+        tous les autres utilisateurs connectés, en précisant le nom d'utilisateur de l'émetteur 
+        initial du message.
+        Le champ de text doit être TEXTE(message) &lt;CRLF&gt;  TEXTE(émetteur initial) &lt;CRLF&gt;
+        </t>
+    </section>
+
+    <section title="type = 10 (0x0A): offrir deux modes en privée">
+        <t>
+        Lorsqu'un client demande une invitation à une messagerie privée, le serveur devra offrir 
+        deux options afin qu'un client puisse, en précisant les modes centralisé ou décentralisé.
+        Le champ de texte doit être TEXTE(centralisé ou décentralisé) &lt;CRLF&gt;  
+        </t>
+    </section>   
+
+    <section title="type = 11 (0x0B): InvitationValide">
+        <t>
+        Après un client finit une demande d'invitation à une messagerie privée et de choisir 
+        un mode (centralisé ou décentralisé), le serveur devra répondre une valide invitation au client.
+        Le champ de texte doit être vide. 
+        </t>
+    </section>  
+
+
+    <section title="type = 12 (0x0C): compter nombre du client à cette messagerie">
+        <t>
+        Pour assurer de la qualité de communication, chaque section de tous les temps, le serveur doit
+        compter nombre du client à cette messagerie. S'il reste une seule personne, le serveur doit 
+        fermer cette messagerie. 
+        Le champ de texte doit être vide. 
+        </t>
+    </section>  
+
+    <section title="type = 13 (0x0D): fermer une messagerie">
+        <t>
+        Quand une messagerie reste une seule personne, le serveur doit fermer cette messagerie. 
+        Le champ de texte doit être TEXTE(fermer cette messagerie car il reste seule personne)&lt;CRLF&gt;. 
+        </t>
+    </section>  
+
+        <section title="type = 14 (0x0E): EnvoieInvalide (Nom de client recepteur n'existe pas)">
+        	<t>
+        Lorsqu'un client envoie un message à l'autre client, mais le nom de client n'existe pas, 
+        le serveur indique une erreur. 
+        Le champ de texte doit être TEXTE(Nom de client recepteur n'existe pas) &lt;CRLF&gt;.
+        	</t>
+        </section>
+
+        <section title="type = 15 (0x0F): Client privée reçoit un message public">
+        	<t>
+        Lorsqu'un client privé reçoit un message public, le serveur indique une erreur. 
+        Le champ de texte doit être TEXTE(Client privée reçoit un message public) &lt;CRLF&gt;.
+        	</t>
+        </section>
+        <section title="type = 16 (0x10): Messagerie se termine losqu'il y a plus de clients">
+        	<t>
+        Une messagerie se termine lorsqu'il y a plus de clients, le serveur indique une erreur. 
+        Le champ de texte doit être TEXTE(Messagerie se termine losqu'il y a plus de clients) &lt;CRLF&gt;.
+        	</t>
+	</section>
+        <section title="type = 17 (0x11): Nombre de client est supérieur au limitation de nombre de groupe">
+        	<t>
+        Pour une messagerie il y a une limitation de participante. Quand le nombre de client 
+        est supérieur à la limitation de nombre de groupe, le serveur indique une erreur. 
+        Le champ de texte doit être TEXTE(Nombre de client est supérieur au limitation de nombre de groupe) &lt;CRLF&gt;.
+        	</t>
+        </section>
+
+</section>
+
+<section title="Format de 2er Paquet ">
+    <t>
+    <figure align="center" anchor="sample_pkt1">
+    <artwork>
+
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |numéro de séquence|  type         |  texte length    |état|mode|
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+-+-+|
+ |                                                               |
+ .                                                               .
+ .                       Texte                                    . 
+ .                                                               .
+ |                                                               |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        </artwork></figure></t>
+        <t>État (2 bits)</t>
+        <t>Définier le statut de client (messagerie publique, ou une des messageries privées).</t>
+        <t>00--> messagerie publique</t>
+        <t>01--> messagerie privée</t>
+        <t>
+        Dans le cas d'une messagerie privée, un message envoyé par un des participants devra
+        arriver à tous les utilisateurs ayant accepté l'invitation à la messagerie privée. Ils ne 
+        reçoivent plus (ni ne peuvent envoyés) de messages avec les utilisateurs restés dans la 
+        messagerie publique. Il pourra y avoir plusieurs messageries privées en parallèle, 
+        mais un utilisateur ne peut appartenir qu'à une seule messagerie (publique ou privée).
+        </t>
+        <t>Mode (2 bits) </t>
+        <t>Définir le mode de serveur pour les messageries privées:</t>
+        <t>00 --> une option centralisée</t>
+        <t>01 --> une autre option décentralisée</t>
+        <t>
+        Dans le mode centralisé, le serveur reste au milieu des conservations; c'est lui qui 
+        reçoit l'ensemble des messages et qui les relaye aux utilisateurs concernés. 
+        Dans le mode décentralisé, le serveur est exclu des communications: les messages ne 
+        circulent plus à travers le serveur, mais passent directement d'un client à un autre.
+        </t>
+
+
+        <section title="type = 18 (0x12): Client envoie un message">
+        	<t>
+        Envoyé depuis un client vers le serveur ou depuis un client vers un (des) autre(s) client(s).
+        Un client doit choisir le statut (public ou privée).
+        Noms de client doivent être identifiés par le serveur via l'adresse IP.
+        Le champ d'état doit être 00 ou 01.
+        Le champ de texte doit être TEXTE(Message) &lt;CRLF&gt;.
+        	</t>
+        </section>
+        <section title="type = 19 (0x13): Invitation à une messagerie ">
+        	<t>
+        Envoyé depuis un client vers le serveur (et éventuellement relayé depuis le serveur vers un client),
+        ce message invite à participer à une messagerie privée.
+        Le champ de texte doit être vide.
+        	</t>
+        </section>
+
+        <section title="type = 20 (0x14): choisir le mode">
+          <t>
+        Envoyé depuis un client vers le serveur. Quand le serveur offre deux modes (centralisé ou décentralisé)
+        pour choisir, un client doit choisir un mode.
+        Le champ de mode doit être 00 ou 01.
+        Le champ de texte doit être vide.
+          </t>
+        </section>
+
+    </section>
+
+
+<section title="Format de 3er Paquet ">
+    <t>
+    <figure align="center" anchor="sample_pkt2">
+    <artwork>
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |numéro de séquence|  type     |  texte length                  |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+      
+ |s |noms d'utilisateur  | length de nom                         |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ .                                                               .
+ .                                                               .
+ .                                                               .
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |s|noms d'utilisateur  |  length de nom                         |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+        </artwork></figure></t>
+        
+
+        <t>s--statut (2 bits)</t>
+
+        <t>
+        Ce champ contient le statut de client 
+        00 -- messagerie publique 
+        01 -- messageries privées
+        </t>
+
+        <t>nom d'utilisateur (10 bits)</t>
+
+        <t>Ce champ contient la liste des noms d'utilisateur.</t>
+
+        <section title="type = 21 (0x15): Liste d'utilisateur">
+        	<t>
+        Quand un client demande de liste des utilisateurs actuellement connectés au serveur. Le 
+        serveur doit renvoyer la liste des noms d'utilisateur, ainsi que leur statut. 
+        	</t>
+        </section>
+
+        </section>
+</section><!--end of Control Message Type section-->
+
+
+<section title="Fiabilité">
+        <t>
+        Ce protocole devra fonctionner au-dessus d'UDP et assurer la fiabilité de la liaison. 
+        Ceci signifie que si un message est perdu sur le réseau entre le client et le serveur 
+        ou entre le serveur et le client,ce message devra être retransmis jusqu'à réception de 
+        ce dernier ou alors jusqu'à ce qu'un nombre d'essais maximum ait été atteint.
+        De plus, afin de ne pas surcharger le serveur, les clients devraient attendre au moins 2 seconds
+        avant renvoyer un message.
+        </t>
+    </section>
+
+
+    <section title="Serveur Configuration">
+        <t>
+        Chaque serveur doit maintenir une base de données locale mappant noms à l'adresse IP. C'est-à-dire 
+        un nom d'utilisateur doit correspondre avec une seule adresse IP.
+    
+        </t>
+    </section>
+
+    <section title="Exemple des scénarios d'usage">
+        <t>
+            Pour simuler un scénario d'usage, on suppose que le client Lucy a déjà connecté le serveur 
+            et son statut est public.
+        </t>
+    <t>
+    <figure>
+    <artwork>
+Client                               Server                           Client
+(Sheng)                                                               (Lucy)
+   |                                    |                                |
+   |               connexion1           |                                |
+   |-----------------------------------&gt;|                                |
+   |                'Lucy'              |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |           ConnexionInvalide        |                                |
+   |&lt;-----------------------------------|                                |
+   |      'nom de client déjà utilisé'  |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |              connexion2            |                                |
+   |-----------------------------------&gt;|                                |
+   |              'Sheng'               |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |                 ACK1               |                                |
+   |&lt;-----------------------------------|                                |
+   |                                    |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |      envoyer un message à Bob      |                                |
+   |-------------------------------&gt;X   |                                |
+   |               'Bonjour'            |                                |  
+   |                                    |                                |
+   |      envoyer un message à Bob      |                                |
+   |-----------------------------------&gt;|                                |
+   |                'Bonjour'           |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |          EnvoieInvalide            |                                |
+   |&lt;-----------------------------------|                                |
+   |   'nom de recepteur n'existe pas'  |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |         Demande de liste           |                                |
+   |-----------------------------------&gt;|                                |
+   |                                    |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |           liste d'utilsateur       |                                |
+   |&lt;-----------------------------------|                                |
+   |           'publique, Lucy'         |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |       envoyer un message à Lucy    |                                |
+   |-----------------------------------&gt;|                                |
+   |               'Bonjour'            |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |                 ACK2               |       diffuser un message1     |
+   |&lt;-----------------------------------|-------------------------------&gt;|
+   |                                    |      'Bonjour, Sheng envoie'   |
+   |                                    |                                |
+   |                                    |              ACK3              |
+   |                                    |&lt;-------------------------------|
+   |                                    |                                |
+   |                                    |                                |
+   |                                    |  envoyer un message à Sheng    |
+   |                                    |&lt;-------------------------------|
+   |                                    |      'Bonjour, Sheng!'         |
+   |                                    |                                |
+   |      diffuser un message2          |         ACK4                   |
+   |&lt;-----------------------------------|-------------------------------&gt;|
+   |      'Bonjour, Sheng! Lucy envoie' |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |            ACK5                    |                                |
+   |-----------------------------------&gt;|                                |
+   |                                    |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |  Invitation à une messagerie privé |                                |
+   |-----------------------------------&gt;|                                |
+   |      'Sheng,Lucy'                  |                                |
+   |                                    |                                |
+   |                                    |                                |  
+   |    offrir deux modes en privée     |                                |
+   |&lt;-----------------------------------|                                |
+   |    'centralisé ou décentralisé'    |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |     choisir le mode centralisé     |                                |
+   |-----------------------------------&gt;|                                |                       
+   |       'centralisé'                 |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |              ACK6                  |Invitation à la messagerie privé|
+   |&lt;-----------------------------------|-------------------------------&gt;|
+   |                                    |'Sheng vous invite messagerie'  |
+   |                                    |                                |
+   |                                    |    Accepter une invitation     |
+   |                                    |&lt;-------------------------------|
+   |         InvitationValide           |                                |
+   |&lt;-----------------------------------|                                |
+   |                                    |                                |
+   |        envoyer un message3         |                                |
+   |-----------------------------------&gt;|                                |
+   |            'Rebonjour'             |                                |
+   |                                    |                                |
+   |                ACK7                |       diffuser un message3     |
+   |&lt;-----------------------------------|-------------------------------&gt;|
+   |                                    |       'Rebonjour,shen envoie'  |
+   |                                    |                                |
+   |                                    |                                |
+   |                                    |              ACK8              |
+   |                                    |&lt;-------------------------------|
+   |                                    |                                |
+   |                                    |                                |   
+   |                                    |                                |
+   |                                    |       envoyer un message4      |
+   |                                    |&lt;-------------------------------|
+   |                                    |            'Rebonjour'         |
+   |                                    |                                |
+   |          diffuser un message4      |           ACK9                 |
+   |&lt;-----------------------------------|-------------------------------&gt;|              
+   |         'Rebonjour,Lucy envoie'    |                                |
+   |                                    |                                |
+   |          ACK10                     |                                |
+   |-----------------------------------&gt;|                                | 
+   |                                    |                                |
+   |                                    |                                |
+   |      quitter la messagerie         |                                |
+   |-----------------------------------&gt;|                                |
+   |                                    |                                |
+   |                                    |                                |
+   |                                    |                                |
+   |           ACK11                    |compter                         |
+   |&lt;-----------------------------------|----- nombre du client          |
+   |                                    |    | à cette                   |
+   |                                    |    |messagerie                 |
+   |                                    |&lt;---|                           |
+   |                                    |       fermer une messagerie    |
+   |                                    |-------------------------------&gt;|
+   |                                    |  'fermer cette messagerie car  |
+   |                                    |   il reste seule personne '    | 
+   |                                    |                                |   
+   |     Déconnexion                    |                                |
+   |-----------------------------------&gt;|                                |
+   |                                    |                                |
+   |                                    |                                |
+   |          ACK12                     |                                |
+   |&lt;-----------------------------------|                                |
+   |                                    |                                |
+   |                                    |                                |
+    </artwork></figure></t>
+
+
+    <t>détail de scénario (en hexadécimal 0x):</t>
+      <t> connexion1: 
+    <list hangIndent="0" style="hanging"> 
+      <t>numéro de séquence = 00</t>
+      <t>type = 01</t>
+      <t>texte length = 04</t>
+      <t>texte: 6c 75 63 79 0a</t>
+    </list>
+    </t>
+
+      <t> ConnexionInvalide : 
+    <list hangIndent="0" style="hanging"> 
+      <t>numéro de séquence = 00</t>
+      <t>type = 02</t>
+      <t>texte length = 19</t>
+      <t>texte: 6e 6f 6d 20 64 65 20 63 6c 69 65 6e 74 20 64 65 6a 61 20 75 74 69 6c 69 73 65</t>
+    </list>
+    </t>
+
+     <t> connexion2  : 
+    <list hangIndent="0" style="hanging"> 
+      <t>numéro de séquence = 01</t>
+      <t>type = 01</t>
+      <t>texte length = 04</t>
+      <t>texte: 53 68 65 6e 67</t>
+    </list>
+    </t>
+
+     <t> ACK1 : 
+    <list hangIndent="0" style="hanging"> 
+      <t>numéro de séquence = 01</t>
+      <t>type = 08</t>
+    </list>
+    </t>
+
+    <t> envoyer un message a Bob : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 02</t>
+    <t>type = 12</t>
+    <t>texte length = 06</t>
+    <t>texte: 42 6f 6e 6a 6f 75 72</t>
+    </list>
+    </t>
+
+    <t> InvalideEnvoie   : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 02</t>
+    <t>type = 0E</t>
+    <t>texte length = 1D</t>
+    <t>texte: 6e 6f 6d 20 64 65 20 72 65 63 65 70 74 65 75 72 20 6e 27 65 78 69 73 74 65 20 70 61 73</t>
+    </list>
+    </t>
+    
+    <t> Demande de liste : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 03</t>
+    <t>type = 04</t>
+    </list>
+    </t>
+
+    <t> liste d'utilsateur  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 03</t>
+    <t>type = 15</t>
+    <t>texte length = 0D</t>
+    <t>texte: 70 75 62 6c 69 71 75 65 2c 20 4c 75 63 79</t>
+    </list>
+    </t>
+
+    <t> envoyer un message a Lucy  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 04</t>
+    <t>type = 12</t>
+    <t>texte length = 06</t>
+    <t>texte: 42 6f 6e 6a 6f 75 72</t>
+    </list>
+    </t>
+
+    <t> ACK2  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 04</t>
+    <t>type = 08</t>
+    </list>
+    </t>
+
+    <t> diffuser un message1  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 04</t>
+    <t>type = 09</t>
+    <t>texte length = 14</t>
+    <t>texte: 42 6f 6e 6a 6f 75 72 2c 20 53 68 65 6e 67 20 65 6e 76 6f 69 65</t>
+    </list>
+    </t> 
+
+    <t> ACK3  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 04</t>
+    <t>type = 08</t>
+    </list>
+    </t>
+
+    <t> envoyer un message a Sheng  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 05</t>
+    <t>type = 12</t>
+    <t>texte length = 0E</t>
+    <t>texte: 42 6f 6e 6a 6f 75 72 2c 20 53 68 65 6e 67 21</t>
+    </list>
+    </t>
+
+    <t> diffuser un message2  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 05</t>
+    <t>type = 09</t>
+    <t>texte length = 1A</t>
+    <t>texte: 42 6f 6e 6a 6f 75 72 2c 20 53 68 65 6e 67 21 20 4c 75 63 79 20 65 6e 76 6f 69 65</t>
+    </list>
+    </t>
+
+    <t> ACK4  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 05</t>
+    <t>type = 08</t>
+    </list>
+    </t>
+
+    <t> ACK5  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 05</t>
+    <t>type = 08</t>
+    </list>
+    </t>
+
+    <t> Invitation a une messagerie prive  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 06</t>
+    <t>type = 13</t>
+    <t>texte length = 09</t>
+    <t>texte: 53 68 65 6e 67 2c 4c 75 63 79</t>
+    </list>
+    </t>
+
+    <t> offrir deux modes en privee  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 06</t>
+    <t>type = 0A</t>
+    <t>texte length = 19</t>
+    <t>texte: 63 65 6e 74 72 61 6c 69 73 65 20 6f 75 20 64 65 63 65 6e 74 72 61 6c 69 73 65</t>
+    </list>
+    </t>
+
+    <t> choisir le mode centralise  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 07</t>
+    <t>type = 14</t>
+    <t>texte length = 09</t>
+    <t>texte: 63 65 6e 74 72 61 6c 69 73 65</t>
+    </list>
+    </t>
+
+    <t> ACK6  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 07</t>
+    <t>type = 08</t>
+    </list>
+    </t>
+
+    <t> Invitation a la messagerie prive  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 08</t>
+    <t>type = 13</t>
+    <t>texte length = 1B</t>
+    <t>texte: 53 68 65 6e 67 20 76 6f 75 73 20 69 6e 76 69 74 65 20 6d 65 73 73 61 67 65 72 69 65</t>
+    </list>
+    </t>
+
+    <t> Accepter une invitation  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 08</t>
+    <t>type = 05</t>
+    </list>
+    </t>
+
+    <t> InvitationValide  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 08</t>
+    <t>type = 0B</t>
+    </list>
+    </t>
+
+
+    <t> envoyer un message3  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 09</t>
+    <t>type = 12</t>
+    <t>texte length = 08 </t>
+    <t>texte: 52 65 62 6f 6e 6a 6f 75 72</t>
+    </list>
+    </t>
+
+    <t> ACK7  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 09</t>
+    <t>type = 08</t>
+    </list>
+    </t>
+
+    <t> diffuser un message3  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 0A</t>
+    <t>type = 09</t>
+    <t>texte length = 14</t>
+    <t>texte: 52 65 62 6f 6e 6a 6f 75 72 2c 73 68 65 6e 20 65 6e 76 6f 69 65</t>
+    </list>
+    </t>
+
+    <t> ACK8  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 0A</t>
+    <t>type = 08</t>
+    </list>
+    </t> 
+
+    <t> envoyer un message4  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 0B</t>
+    <t>type = 12</t>
+    <t>texte length = 08</t>
+    <t>texte: 52 65 62 6f 6e 6a 6f 75 72</t>
+    </list>
+    </t>
+
+    <t> ACK9  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 0B</t>
+    <t>type = 08</t>
+    </list>
+    </t> 
+
+    <t> diffuser un message4  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 0C</t>
+    <t>type = 09</t>
+    <t>texte length = 14</t>
+    <t>texte: 52 65 62 6f 6e 6a 6f 75 72 2c 4c 75 63 79 20 65 6e 76 6f 69 65</t>
+    </list>
+    </t>
+
+    <t> ACK10  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 0C</t>
+    <t>type = 08</t>
+    </list>
+    </t> 
+
+    <t> quitter la messagerie  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 0D</t>
+    <t>type = 07</t>
+    </list>
+    </t>
+
+    <t> ACK11  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 0D</t>
+    <t>type = 08</t>
+    </list>
+    </t>    
+
+    <t> compter nombre du client a cette messagerie  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 0E</t>
+    <t>type = 0C</t>
+    </list>
+    </t>
+
+    <t> fermer une messagerie   : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 0F</t>
+    <t>type = 0D</t>
+    <t>texte length = 22</t>
+    <t>texte: 66 65 72 6d 65 72 20 63 65 74 74 65 20 6d 65 73 73 61 67 65 72 69 
+      65 20 63 61 72 20 69 6c 20 72 65 73 74 65 20 73 65 75 6c 65 20 70 65 72 73 6f 6e 6e 65</t>
+    </list>
+    </t>
+
+    <t> Deconnexion  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 10</t>
+    <t>type = 03</t>
+    </list>
+    </t>
+
+    <t> ACK12  : 
+    <list hangIndent="0" style="hanging"> 
+    <t>numéro de séquence = 10</t>
+    <t>type = 08</t>
+    </list>
+    </t>
+
+
+    </section>
+
+
+  </middle>
+  
+
+  
+</rfc>
