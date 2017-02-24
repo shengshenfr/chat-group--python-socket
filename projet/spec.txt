@@ -1,105 +1,154 @@
+﻿
 
 
 
+Network Working Group                                            S. SHEN
+Internet-Draft                                          Télécom Bretagne
+Intended status: Informational                              Février 2017
+Expires: August 26, 2017
 
-                                                                 S. SHEN
-                                                        Telecom Bretagne
-                                                            Fevrier 2017
 
+                Spécification du Protocole(Version 1.0)
 
-                Specification du Protocole(Version 1.0)
+Résumé
 
-Abstract
+Ce protocole permet de mettre en oeuvre un système de messagerie instantanée entre les clients et le serveur pour que ces derniers puissent se connecter et échanger des messages.
 
-   Ce protocole permet de mettre en oeuvre un systeme de messagerie
-   instantanee entre les clients et le serveur pour que ces derniers
-   puissent se connecter et echanger des messages.
-
-Table of Contents
+Sommaire
 
    1.  Introduction  . . . . . . . . . . . . . . . . . . . . . . . .   2
    2.  Description . . . . . . . . . . . . . . . . . . . . . . . . .   2
-     2.1.  Contraintes . . . . . . . . . . . . . . . . . . . . . . .   2
-     2.2.  Format de 1er Paquet  . . . . . . . . . . . . . . . . . .   2
-       2.2.1.  type = 1 (0x01): Connexion  . . . . . . . . . . . . .   3
-       2.2.2.  type = 2 (0x02): ConnexionInvalide (Nom de client
-               deja utilise) . . . . . . . . . . . . . . . . . . . .   3
-       2.2.3.  type = 3 (0x03): Deconnexion  . . . . . . . . . . . .   3
-       2.2.4.  type = 4 (0x04): Demande de liste . . . . . . . . . .   4
-       2.2.5.  type = 5 (0x05): Accepter une invitation  . . . . . .   4
-       2.2.6.  type = 6 (0x06): Refuser une invitation . . . . . . .   4
-       2.2.7.  type = 7 (0x07): Quitter une messagerie . . . . . . .   4
-       2.2.8.  type = 8 (0x08): Reponse de recepteur (ACK) . . . . .   4
-       2.2.9.  type = 9 (0x09): Serveur diffuse un message . . . . .   4
-       2.2.10. type = 10 (0x0A): offrir deux modes en privee . . . .   4
-       2.2.11. type = 11 (0x0B): InvitationValide  . . . . . . . . .   4
-       2.2.12. type = 12 (0x0C): compter nombre du client a cette
-               messagerie  . . . . . . . . . . . . . . . . . . . . .   5
-       2.2.13. type = 13 (0x0D): fermer une messagerie . . . . . . .   5
-       2.2.14. type = 14 (0x0E): EnvoieInvalide (Nom de client
-               recepteur n'existe pas) . . . . . . . . . . . . . . .   5
-       2.2.15. type = 15 (0x0F): Client privee recoit un message
-               public  . . . . . . . . . . . . . . . . . . . . . . .   5
-       2.2.16. type = 16 (0x10): Messagerie se termine losqu'il y a
-               plus de clients . . . . . . . . . . . . . . . . . . .   5
-       2.2.17. type = 17 (0x11): Nombre de client est superieur au
-               limitation de nombre de groupe  . . . . . . . . . . .   5
-     2.3.  Format de 2er Paquet  . . . . . . . . . . . . . . . . . .   6
-       2.3.1.  type = 18 (0x12): Client envoie un message  . . . . .   7
-       2.3.2.  type = 19 (0x13): Invitation a une messagerie . . . .   7
-       2.3.3.  type = 20 (0x14): choisir le mode . . . . . . . . . .   7
-     2.4.  Format de 3er Paquet  . . . . . . . . . . . . . . . . . .   7
-       2.4.1.  type = 21 (0x15): Liste d'utilisateur . . . . . . . .   8
+     2.1.  Contraintes . . . . . . . . . . . . . . . . . . . . . . . .  2
+     2.2.  Format de 1er Paquet  . . . . . . . . . . . . . . . . . . .  3
+       2.2.1.  type = 1 (0x01): Connexion  . . . . . . . . . . . . . .   4
+       2.2.2.  type = 2 (0x02): ConnexionInvalide (Nom de client 
+		déjà utilisé) . . . . . . . . . . . . . . . . . . . . . . .   4
+       2.2.3.  type = 3 (0x03): Déconnexion  . . . . . . . . . . . . .   4
+       2.2.4.  type = 4 (0x04): Demande de liste . . . . . . . . . . .   4
+       2.2.5.  type = 5 (0x05): Accepter une invitation  . . . . . . .   4
+       2.2.6.  type = 6 (0x06): Refuser une invitation . . . . . . . .   4
+       2.2.7.  type = 7 (0x07): Quitter une messagerie . . . . . . . .   4
+       2.2.8.  type = 8 (0x08): Demander de participer à une 
+		messagerie privée . . . . . . . . . . . . . . . . . . . . .   5
+       2.2.9.  type = 9 (0x09): Dissoudre une messagerie privée .  . .   5
+       2.2.10. type = 10 (0x0A): Réponse de récepteur (ACK). . . . . .   5
+       2.2.11. type = 11 (0x0B): EnvoieInvalide (Nom de client 
+		récepteur n'existe pas)  . . . . . . . . . . .  . . . . . .   5
+       2.2.12. type = 12 (0x0C): offrir deux modes de messagerie 
+		privée  . . . . . . . . . . . . . . . . . . . . . . . . . .   5
+       2.2.13. type = 13 (0x0D): compter nombre d'une messagerie 
+		privée dans le serveur  . . . . . . . . . . . . . . . . . .   5
+       2.2.14. type = 14 (0x0E): InvitationValide. . . . . . . . . . .   6
+       2.2.15. type = 15 (0x0F): InvitationInValide . .  . . . . . . .   6
+       2.2.16. type = 16 (0x10): compter nombre du client à cette 
+		messagerie . . . . . . . . . . . . . . . . . . . . . . . . .  6
+       2.2.17. type = 17 (0x11): serveur ferme une messagerie  . . . . . 6
+       2.2.18. type = 18 (0x12): EnvoieInvalide (Nom de client 
+		récepteur n'existe pas)  . . . . . . . . . . . . . . . .  . . 6
+       2.2.19. type = 19 (0x13): Client privé reçoit un message public . 6
+       2.2.20. type = 20 (0x14): Messagerie privée se termine losqu'il 
+		y a plus de clients  . . . . . . . . . . . . . . . . . . . .  7
+       2.2.21. type = 21 (0x15): Nombre de client est supérieur au 
+		limitation de nombre de groupe  . . . . . . . . . . . . . . . 7
 
 
 
-SHEN                     Expires August 19, 2017                [Page 1]
-
-                       Specification du Protocole           Fevrier 2017
+SHEN                     Expires August 26, 2017                [Page 1]
 
+Internet-Draft         Specification du Protocole           Fevrier 2017   
 
-   3.  Fiabilite . . . . . . . . . . . . . . . . . . . . . . . . . .   8
-   4.  Serveur Configuration . . . . . . . . . . . . . . . . . . . .   8
-   5.  Exemple des scenarios d'usage . . . . . . . . . . . . . . . .   8
-   Author's Address  . . . . . . . . . . . . . . . . . . . . . . . .  16
+     2.3.  Format de 2er Paquet  . . . . . . . . . . . . . . . . . . .  7
+       2.3.1.  type = 22 (0x16): Envoyer un message  . . . . . . . . . . 8
+       2.3.2.  type = 23 (0x17): Serveur diffuse un message . . . . . .  8
+     2.4.  Format de 3er Paquet  . . . . . . . . . . . . . . . . . . .  8
+       2.4.1.  type = 24 (0x18): Invitation à une messagerie privée . .  9
+       2.4.2.  type = 25 (0x19): Choisir une mode de serveur . . . . .   9  
+       2.4.3.  type = 26 (0x1A): Changer la mode de serveur dans une 
+		messagerie privée . . . . . . . . . . . . . . . . . . . . .   9
+       2.4.4.  type = 27 (0x1B): Créer un nom pour une messagerie . . .  9
+       2.4.5.  type = 28 (0x1C): Changer nom de messagerie . . . . . .   9
+     2.5.  Format de 4er Paquet  . . . . . . . . . . . . . . . . . . .  10
+       2.5.1.  type = 29 (0x1D): Liste d'utilisateur . . . . . . . . .   10
+   3.  Fiabilité . . . . . . . . . . . . . . . . . . . . . . . . . .   11
+   4.  Serveur Configuration . . . . . . . . . . . . . . . . . . . .   11
+   5.  Exemple des scénarios d'usage . . . . . . . . . . . . . . . .   11
+     5.1.  scénarios 1  . . . . . . . . . . . . . . . . . . . . . . .   11
+     5.2.  scénarios 2  . . . . . . . . . . . . . . . . . . . . . . .   19 
+   6.  Références  . . . . . . . . . . . . . . . . . . . . . . . . .   23
+   Adresse  d'Auteur . . . . . . . . . . . . . . . . . . . . . . . .   23
 
 1.  Introduction
 
-   L'objectif du protocole est de permettre aux utilisateurs de se
-   connecter a un serveur et pouvoir echanger des messages.  Il permet
-   aussi de creer une messagerie privee ainsi que participer a la
-   messagerie, et puisque des utilisateurs peuvent initier une
-   messagerie privee, en choisissant les deux modes, centralise ou
-   decentralise pour les messageries privees.
+L'objectif du protocole est de permettre aux utilisateurs de se connecter à un serveur et pouvoir échanger des messages. Il permet aussi de créer une messagerie privée ainsi que participer à la messagerie, et puisque des utilisateurs peuvent initier une messagerie privée, en choisissant les deux modes, centralisé ou décentralisé pour les messageries privées.
+
 
 2.  Description
 
 2.1.  Contraintes
 
-   On utilise une unique trame pour chaque message, et ce protocole
-   devra fonctionner au-dessus d'UDP.  Toutes les adresses IP doivent
-   etre des adresses IPv4 valides.
+On utilise une unique trame pour chaque message, et ce protocole devra fonctionner au-dessus d'UDP.  Toutes les adresses IP doivent être des adresses IPv4 valides.
 
-       Ce tableau definit la longueur maximale de quelques elements.
+Par défaut, on suppose que dans ce serveur de communication, il y a seule messagerie publique et il peut exister plusieurs messageries privées.
 
-           +--------------------------------------+------------+
-           |               element                |   taille   |
-           +--------------------------------------+------------+
-           |           nombre de client           |    1024    |
-           |     caracteres du nom de client      |     20     |
-           |             Text message             | 1024 bytes |
-           |    nombre de messagerie simultane    |    100     |
-           | nombre de limtation d'une messagerie |    100     |
-           +--------------------------------------+------------+
+Ce tableau définit la longueur maximale de quelques éléments.
+
+           +----------------------------------------------------+------------+
+           |               élément                              |   taille   |
+           +----------------------------------------------------+------------+
+           |           nombre de client                         |    1024    |
+           |     caractères du nom de client                    |     20     |
+           |             Texte message                          | 1024 bytes |
+           |    nombre de messagerie privée simultané           |    100     |
+           | nombre de limtation de personne dans une messagerie|    100     |
+           +----------------------------------------------------+------------+
 
                           Table 1: Value maximum
 
+
+SHEN                     Expires August 26, 2017                [Page 2]
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+
+
 2.2.  Format de 1er Paquet
 
-   Dans ce protocole, le format de paquet n'est pas le meme pour tous
-   les messages.  En fait, il existe trois formats de paquet en fonction
-   du role qu'ils jouent dans les echanges entre le serveur et les
-   clients.
+Dans ce protocole, le format de paquet n'est pas le même pour tous les messages.  En fait, il existe quatre formats de paquet en fonction du rôle qu'ils jouent dans les échanges entre le serveur et les clients.
+
+                    0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |numéro de séquence|  type         |  texte length     |        |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+         |
+     |                                                               |
+     .                                                               .
+     .                       Texte(length variable)                  .
+     .                                                               .
+     |                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+  Figure 1
+
+
+
+
+Numéro de séquence (10 bits) 
+
+Ce champ définie le numéro de séquence du message.  Pour chaque client ou le serveur, nous définissons un numéro de séquence unique qui augmente lors de l'envoi d'un paquet de message ou la réponse d'un paquet de message (pour un type donné, l'expediteur soit le client soit le serveur, incrémente le numéro de séquence chaque fois qu'il envoie un nouveau paquet).
+
+Type (8 bits) 
+
+Définir le type de message. Ce champ doit contenir une value correcte ci-dessous.
+
+Texte Length (10 bits) 
+
+Définir la longueur de message en byte. Un émetteur doit assurer que ce champ contient une value correcte.
+
+Texte (length variable) 
+
+Définir le contenu de messsage.
 
 
 
@@ -107,771 +156,1077 @@ SHEN                     Expires August 19, 2017                [Page 1]
 
 
 
-
-
-SHEN                     Expires August 19, 2017                [Page 2]
-
-                       Specification du Protocole           Fevrier 2017
-
-
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |numero de sequence|  type         |  texte length     |        |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+         |
-    |                                                               |
-    .                                                               .
-    .                       Text(length variable)                   .
-    .                                                               .
-    |                                                               |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+SHEN                     Expires August 26, 2017                [Page 3]
 
 
 
-                                 Figure 1
 
-   Numero de sequence (10 bits) Ce champ definie le numero de sequence
-   du message.  Pour chaque client ou le serveur, nous definissons un
-   numero de sequence unique qui augmente lors de l'envoi d'un paquet de
-   message ou la reponse d'un paquet de message (pour un type donne,
-   l'expediteur soit le client soit le serveur, incremente le numero de
-   sequence chaque fois qu'il envoie un nouveau paquet).
 
-   Type (8 bits) Definir le type de message.  Ce champ doit contenir une
-   value correcte ci-dessous.
 
-   Texte Length (10 bits) Definir la longueur de message en byte.  Un
-   emetteur doit assurer que ce champ contient une value correcte.
+Internet-Draft         Specification du Protocole           Fevrier 2017
 
-   Texte (length variable): Definir le contenu de messsage.
+
+                               
 
 2.2.1.  type = 1 (0x01): Connexion
 
-   Envoye depuis un client vers le serveur.  Le champ de texte doit etre
-   TEXTE (nom d'utilisateur) <CRLF>
-
-2.2.2.  type = 2 (0x02): ConnexionInvalide (Nom de client deja utilise)
-
-   Envoye depuis le serveur vers un client.  Lorsqu'un client se
-   connecte et indique son nom, mais ce nom est deja utilise, le serveur
-   indique une connexion invalide.  Le champ de texte doit etre TEXTE
-   (nom de client deja utilise) <CRLF>.
-
-2.2.3.  type = 3 (0x03): Deconnexion
-
-   Envoye depuis un client vers le serveur.  Ce message indique la
-   volonte d'un utilisateur de quitter le service de message instantane.
-   Le champ de texte doit etre TEXTE (nom d'utilisateur) <CRLF>
+Envoyé depuis un client vers le serveur. Par défaut, si un client fait un bon connexion, on pense qu'il reste dans un messagerie publique. 
+Le champ de texte doit être TEXTE (nom d'utilisateur) <CRLF>
 
 
+2.2.2.  type = 2 (0x02): ConnexionInvalide (Nom de client déjà utilisé)
 
-SHEN                     Expires August 19, 2017                [Page 3]
-
-                       Specification du Protocole           Fevrier 2017
+Envoyé depuis le serveur vers un client. Lorsqu'un client se connecte et indique son nom, mais ce nom est déjà utilisé, le serveur indique une connexion invalide.  
+Le champ de texte doit etre TEXTE (nom de client deja utilise) <CRLF>.
+
+
+2.2.3.  type = 3 (0x03): Déconnexion
+
+Envoyé depuis un client vers le serveur. Ce message indique la volonté d'un utilisateur de quitter le service de message instantané. 
+Le champ de texte doit être TEXTE (nom d'utilisateur) <CRLF>
 
 
 2.2.4.  type = 4 (0x04): Demande de liste
 
-   Envoye depuis un client vers le serveur.  Ce message demande la liste
-   des utilisateurs actuellement connectes au serveur.  Le champ de
-   texte doit etre vide.
+Envoyé depuis un client vers le serveur. Ce message demande la liste des utilisateurs actuellement connectés au serveur.  
+Le champ de texte doit être vide.
+
 
 2.2.5.  type = 5 (0x05): Accepter une invitation
 
-   Envoye depuis un client vers le serveur pour indiquer son acception
-   de participer a une messagerie privee.  Le champ de texte doit etre
-   vide.
+Envoyé depuis un client vers le serveur pour indiquer son acception de participer à une messagerie privée. 
+Le champ de texte doit être vide.
+
 
 2.2.6.  type = 6 (0x06): Refuser une invitation
 
-   Envoye depuis un client vers le serveur pour indiquer son refus de
-   participer a une messagerie privee.  Le champ de texte doit etre
-   vide.
+Envoyé depuis un client vers le serveur pour indiquer son refus de participer à une messagerie privée. 
+Le champ de texte doit être vide.
+
 
 2.2.7.  type = 7 (0x07): Quitter une messagerie
 
-   Envoye depuis un client vers le serveur pour indique la volonte d'un
-   utilisateur de quitter une messagerie instantane.  Le champ de texte
-   doit etre vide.
-
-2.2.8.  type = 8 (0x08): Reponse de recepteur (ACK)
-
-   Indique qu'un message a ete recu.  L'ACK doit etre envoye quand le
-   recepteur recoit un message.  Le champ de texte doit etre vide.
-
-2.2.9.  type = 9 (0x09): Serveur diffuse un message
-
-   Lorsqu'un client envoie un message texte au serveur, le serveur devra
-   le diffuser a tous les autres utilisateurs connectes, en precisant le
-   nom d'utilisateur de l'emetteur initial du message.  Le champ de text
-   doit etre TEXTE(message) <CRLF> TEXTE(emetteur initial) <CRLF>
-
-2.2.10.  type = 10 (0x0A): offrir deux modes en privee
-
-   Lorsqu'un client demande une invitation a une messagerie privee, le
-   serveur devra offrir deux options afin qu'un client puisse, en
-   precisant les modes centralise ou decentralise.  Le champ de texte
-   doit etre TEXTE(centralise ou decentralise) <CRLF>
-
-2.2.11.  type = 11 (0x0B): InvitationValide
-
-   Apres un client finit une demande d'invitation a une messagerie
-   privee et de choisir un mode (centralise ou decentralise), le serveur
+Envoyé depuis un client vers le serveur pour indique la volonté d'un utilisateur de quitter une messagerie instantané.  
+Le champ de texte doit être vide.
 
 
 
 
-SHEN                     Expires August 19, 2017                [Page 4]
-
-                       Specification du Protocole           Fevrier 2017
 
 
-   devra repondre une valide invitation au client.  Le champ de texte
-   doit etre vide.
 
-2.2.12.  type = 12 (0x0C): compter nombre du client a cette messagerie
+SHEN                     Expires August 26, 2017                [Page 4]
 
-   Pour assurer de la qualite de communication, chaque section de tous
-   les temps, le serveur doit compter nombre du client a cette
-   messagerie.  S'il reste une seule personne, le serveur doit fermer
-   cette messagerie.  Le champ de texte doit etre vide.
 
-2.2.13.  type = 13 (0x0D): fermer une messagerie
+Internet-Draft         Specification du Protocole           Fevrier 2017
 
-   Quand une messagerie reste une seule personne, le serveur doit fermer
-   cette messagerie.  Le champ de texte doit etre TEXTE(fermer cette
-   messagerie car il reste seule personne)<CRLF>.
 
-2.2.14.  type = 14 (0x0E): EnvoieInvalide (Nom de client recepteur
+
+2.2.8.  type = 8 (0x08): Demander de participer à une messagerie privée
+
+Envoyé depuis un client vers le serveur pour indique un utilisateur voudrait demander de participer à une messagerie privée. Noms de messageries doivent être identifiés par le serveur via l'adresse IP.  
+Le champ de texte doit être TEXTE(nom de messagerie) <CRLF>.
+
+
+2.2.9.  type = 9 (0x09): Dissoudre une messagerie privée
+
+Envoyé depuis un client vers le serveur pour indique un manager d'utilisateur  dans une messagerie privée voudrait dissoudre cette messagerie privée.   
+Le champ de texte doit être vide.
+
+
+
+2.2.10.  type = 10 (0x0A): Réponse positif de récepteur (ACK)
+
+Indique qu'un message a été reçu.  L'ACK doit être envoyé quand le récepteur reçoit un message.  
+Le champ de texte soit vide soit TEXTE(message) <CRLF>.
+
+
+2.2.11.  type = 11 (0x0B): EnvoieInvalide (Nom de client récepteur
          n'existe pas)
 
-   Lorsqu'un client envoie un message a l'autre client, mais le nom de
-   client n'existe pas, le serveur indique une erreur.  Le champ de
-   texte doit etre TEXTE(Nom de client recepteur n'existe pas) <CRLF>.
+Lorsqu'un client envoie un message a l'autre client, mais le nom de client n'existe pas, le serveur indique une erreur.  
+Le champ de texte doit être TEXTE(Nom de client récepteur n'existe pas) <CRLF>.
 
-2.2.15.  type = 15 (0x0F): Client privee recoit un message public
 
-   Lorsqu'un client prive recoit un message public, le serveur indique
-   une erreur.  Le champ de texte doit etre TEXTE(Client privee recoit
-   un message public) <CRLF>.
+2.2.12.  type = 12 (0x0C): offrir deux modes de messagerie privée
 
-2.2.16.  type = 16 (0x10): Messagerie se termine losqu'il y a plus de
+Lorsqu'un client demande une invitation a une messagerie privée, le serveur devra offrir deux options afin qu'un client puisse, en précisant les modes centralisé ou décentralisé.  
+Le champ de texte doit être TEXTE(centralisé ou décentralisé) <CRLF>
+
+
+2.2.13.  type = 13 (0x0D): compter nombre d'une messagerie privée dans le 		serveur
+
+Pour assurer de la qualité de communication, chaque section de tous les temps, le serveur doit compter nombre d'une messagerie qu'il existe. Si le nombre d'une messagerie privée est déjà arrivée au limitation maximale, le serveur va refuser  de demande d'invitation à une messagerie.   
+Le champ de texte doit être vide.
+
+
+
+
+
+
+
+
+SHEN                     Expires August 26, 2017                [Page 5]
+
+
+
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+
+2.2.14.  type = 14 (0x0E): InvitationValide
+
+Après un client finit une demande d'invitation à une messagerie privée et de choisir un mode (centralisé ou décentralisé), le serveur doit vérifier si le nombre d'une messagerie existant est supérieur au limitation maximale de du nombre de messagerie et compter nombre du client qui va participer à cette messagerie. S'il est inférieur et le nombre du client est plus de seuk personne, le serveur  devra répondre une valide invitation au client et donner un nom pour cette messagerie par défaut.   
+Le champ de texte doit être vide.
+
+
+2.2.15.  type = 15 (0x0F): InvitationInValide
+
+Après un client finit une demande d'invitation à une messagerie privée le serveur doit vérifier si le nombre d'une messagerie existant est supérieur au limitation maximale de du nombre de messagerie et compter le nombre du clients qu'ils vont participer à cette messagerie. S'il est supérieur ou une seule personne participe à cette messagerie, le serveur devra répondre une invalide invitation au client.  
+Le champ de texte doit être vide.
+
+
+2.2.16.  type = 16 (0x10): compter nombre du client à cette messagerie
+
+Pour assurer de la qualité de communication, chaque section de tous les temps, le serveur doit compter nombre du client à cette messagerie. S'il reste une seule personne, le serveur doit fermer cette messagerie.  
+Le champ de texte doit être vide.
+
+
+2.2.17.  type = 17 (0x11): serveur ferme une messagerie
+
+Quand une messagerie reste une seule personne, le serveur doit fermer cette messagerie.  
+Le champ de texte doit être TEXTE(fermer cette messagerie car il reste seule personne)<CRLF>.
+
+
+2.2.18.  type = 18 (0x12): EnvoieInvalide (Nom de client récepteur
+         n'existe pas)
+
+Lorsqu'un client envoie un message a l'autre client, mais le nom de client n'existe pas, le serveur indique une erreur.  
+Le champ de texte doit être TEXTE(Nom de client récepteur n'existe pas) <CRLF>.
+
+
+2.2.19.  type = 19 (0x13): Client privé reçoit un message public
+
+Lorsqu'un client privé reçoit un message public, le serveur indique une erreur. Le champ de texte doit être TEXTE(Client privé reçoit un message public) <CRLF>.
+
+
+
+SHEN                     Expires August 26, 2017                [Page 6]
+
+
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+
+2.2.20.  type = 20 (0x14): Messagerie privée se termine losqu'il y a plus de
          clients
 
-   Une messagerie se termine lorsqu'il y a plus de clients, le serveur
-   indique une erreur.  Le champ de texte doit etre TEXTE(Messagerie se
-   termine losqu'il y a plus de clients) <CRLF>.
+Une messagerie se termine lorsqu'il y a plus de clients, le serveur indique une erreur.  
+Le champ de texte doit être TEXTE(Messagerie se termine losqu'il y a plus de clients) <CRLF>.
 
-2.2.17.  type = 17 (0x11): Nombre de client est superieur au limitation
+
+2.2.21.  type = 21 (0x15): Nombre de client est supérieur au limitation
          de nombre de groupe
 
-   Pour une messagerie il y a une limitation de participante.  Quand le
-   nombre de client est superieur a la limitation de nombre de groupe,
-   le serveur indique une erreur.  Le champ de texte doit etre
-   TEXTE(Nombre de client est superieur au limitation de nombre de
-   groupe) <CRLF>.
+Pour une messagerie il y a une limitation de participante.  Quand le nombre de client est supérieur à la limitation de nombre de groupe, le serveur indique une erreur.  
+Le champ de texte doit être TEXTE (Nombre de client est supérieur au limitation de nombre de groupe) <CRLF>.
 
 
-
-
-
-
-
-SHEN                     Expires August 19, 2017                [Page 5]
-
-                       Specification du Protocole           Fevrier 2017
 
 
 2.3.  Format de 2er Paquet
 
-
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |numero de sequence|  type         |  texte length    |etat|mode|
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+-+-+|
-    |                                                               |
-    .                                                               .
-    .                       Texte                                    .
-    .                                                               .
-    |                                                               |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                    0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |numéro de séquence|  type         |  texte length    |         |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+-+-         |
+     |nom d'émetteur    | nom de récepteur|                          |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-                          |
+     |                                                               |
+     .                                                               .
+     .                 Texte(length variable)                        .
+     .                                                               .
+     |                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
                                  Figure 2
 
-   Etat (2 bits)
 
-   Definier le statut de client (messagerie publique, ou une des
-   messageries privees).
 
-   00--> messagerie publique
+Nom d'émetteur (10 bits)
 
-   01--> messagerie privee
+Ce champ définit le nom d'émetteur du client qui envoie un message.Noms de client doivent être identifiés par le serveur via l'adresse IP.
 
-   Dans le cas d'une messagerie privee, un message envoye par un des
-   participants devra arriver a tous les utilisateurs ayant accepte
-   l'invitation a la messagerie privee.  Ils ne recoivent plus (ni ne
-   peuvent envoyes) de messages avec les utilisateurs restes dans la
-   messagerie publique.  Il pourra y avoir plusieurs messageries privees
-   en parallele, mais un utilisateur ne peut appartenir qu'a une seule
-   messagerie (publique ou privee).
+Nom de récepteur (10 bits)
 
-   Mode (2 bits)
-
-   Definir le mode de serveur pour les messageries privees:
-
-   00 --> une option centralisee
-
-   01 --> une autre option decentralisee
-
-   Dans le mode centralise, le serveur reste au milieu des
-   conservations; c'est lui qui recoit l'ensemble des messages et qui
-   les relaye aux utilisateurs concernes.  Dans le mode decentralise, le
-   serveur est exclu des communications: les messages ne circulent plus
-   a travers le serveur, mais passent directement d'un client a un
-   autre.
+Ce champ définit le nom de récepteur du client qui reçoit un message.Noms de client doivent être identifiés par le serveur via l'adresse IP.
 
 
 
-SHEN                     Expires August 19, 2017                [Page 6]
-
-                       Specification du Protocole           Fevrier 2017
+SHEN                     Expires August 26, 2017                [Page 7]
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
 
 
-2.3.1.  type = 18 (0x12): Client envoie un message
 
-   Envoye depuis un client vers le serveur ou depuis un client vers un
-   (des) autre(s) client(s).  Un client doit choisir le statut (public
-   ou privee).  Noms de client doivent etre identifies par le serveur
-   via l'adresse IP.  Le champ d'etat doit etre 00 ou 01.  Le champ de
-   texte doit etre TEXTE(Message) <CRLF>.
+2.3.1.  type = 22 (0x16): Envoyer un message
 
-2.3.2.  type = 19 (0x13): Invitation a une messagerie
+Envoyé depuis un client vers le serveur ou depuis un client vers un (des) autre(s) client(s) ou du serveur vers un client. Il contient au minimum une chaîne de caractères représentant le message lui même. 
+Le champ de texte doit être TEXTE(Message) <CRLF>.
 
-   Envoye depuis un client vers le serveur (et eventuellement relaye
-   depuis le serveur vers un client), ce message invite a participer a
-   une messagerie privee.  Le champ de texte doit etre vide.
 
-2.3.3.  type = 20 (0x14): choisir le mode
+2.3.2.  type = 23 (0x17): Serveur diffuse un message
 
-   Envoye depuis un client vers le serveur.  Quand le serveur offre deux
-   modes (centralise ou decentralise) pour choisir, un client doit
-   choisir un mode.  Le champ de mode doit etre 00 ou 01.  Le champ de
-   texte doit etre vide.
+Lorsqu'un client envoie un message texte au serveur, le serveur devra le diffuser à tous les autres utilisateurs connectés, en precisant le nom d'utilisateur de l'émetteur initial du message.  
+Le champ de text doit être TEXTE(message) <CRLF> TEXTE(émetteur initial envoie) <CRLF>
+
+
 
 2.4.  Format de 3er Paquet
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |numero de sequence|  type     |  texte length                  |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |s |noms d'utilisateur  | length de nom                         |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    .                                                               .
-    .                                                               .
-    .                                                               .
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-    |s|noms d'utilisateur  |  length de nom                         |
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+                    0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |numéro de séquence|  type         |  texte length    |état|mode|
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++-+-+-+-+-+-+-+-+-+|
+     |nom de messagerie |                                            |
+     +-+-+-+-+-+-+-+-+-+-                                            |
+     |                                                               |
+     .                                                               .
+     .                 Texte(length variable)                        .
+     .                                                               .
+     |                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
                                  Figure 3
 
-   s--statut (2 bits)
 
-   Ce champ contient le statut de client 00 -- messagerie publique 01 --
-   messageries privees
+État (2 bits)
 
-   nom d'utilisateur (10 bits)
+Définir le statut de client (messagerie publique, ou une des messageries privées).
 
-   Ce champ contient la liste des noms d'utilisateur.
+00--> messagerie publique
 
+01--> messagerie privée
 
-
-
-SHEN                     Expires August 19, 2017                [Page 7]
-
-                       Specification du Protocole           Fevrier 2017
+Dans le cas d'une messagerie privée, un message envoye par un des participants devra arriver à tous les utilisateurs ayant accepté l'invitation à la messagerie privee.  Ils ne reçoivent plus (ni ne peuvent envoyés) de messages avec les utilisateurs restés dans la messagerie publique.  Il pourra y avoir plusieurs messageries privées en parallèle, mais un utilisateur ne peut appartenir qu'à une seule messagerie (publique ou privée).
 
 
-2.4.1.  type = 21 (0x15): Liste d'utilisateur
 
-   Quand un client demande de liste des utilisateurs actuellement
-   connectes au serveur.  Le serveur doit renvoyer la liste des noms
-   d'utilisateur, ainsi que leur statut.
+SHEN                     Expires August 26, 2017                [Page 8]
 
-3.  Fiabilite
+Internet-Draft         Specification du Protocole           Fevrier 2017
 
-   Ce protocole devra fonctionner au-dessus d'UDP et assurer la
-   fiabilite de la liaison.  Ceci signifie que si un message est perdu
-   sur le reseau entre le client et le serveur ou entre le serveur et le
-   client,ce message devra etre retransmis jusqu'a reception de ce
-   dernier ou alors jusqu'a ce qu'un nombre d'essais maximum ait ete
-   atteint.  De plus, afin de ne pas surcharger le serveur, les clients
-   devraient attendre au moins 2 seconds avant renvoyer un message.
+
+
+Mode (2 bits)
+
+Définir le mode de serveur pour les messageries privées:
+
+00 --> une option centralisée
+
+01 --> une autre option decentralisée
+
+Dans le mode centralisé, le serveur reste au milieu des conservations; c'est lui qui reçoit l'ensemble des messages et qui les relaye aux utilisateurs concernés.  Dans le mode décentralisé, le serveur est exclu des communications: les messages ne circulent plus à travers le serveur, mais passent directement d'un client à un autre.
+
+2.4.1.  type = 24 (0x18): Invitation à une messagerie privée
+
+Envoyé depuis un client vers le serveur (et éventuellement relaye depuis le serveur vers un client), ce message invite à participer à une messagerie privée.
+Le promoteur de messagerie doit indiquer les noms de personne invitée. 
+De plus, le client qui propose cette invitation va devenir un manager de cette messagerie. Le manager peuvent choisir ou changer une mode de serveur, etc...
+ 
+Le champ de texte doit être TEXTE(nom d'utilisateur, nom d'utilisateur,...) <CRLF>.
+
+
+2.4.2.  type = 25 (0x19): Choisir une mode de serveur
+
+Envoyé depuis un client vers le serveur. Quand le serveur offre deux modes (centralisé ou décentralisé) pour choisir, un client doit choisir une mode.  
+Le champ de mode doit être 00 ou 01.  
+Le champ de texte doit être vide.
+
+
+2.4.3.  type = 26 (0x1A): Changer la mode de serveur dans une messagerie privée
+
+Envoyé depuis un client vers le serveur. Les clients dans une messagerie privée  pouvent changer la mode de serveur dans une messagerie, mais il doit être d'accord par des autres clients dans cette messagrie. 
+Le champ de texte doit être vide.
+
+
+2.4.4.  type = 27 (0x1B): Créer un nom pour une messagerie
+
+Envoyé depuis un client vers le serveur. Quand un client fait un invitation à une messagerie privée, il peut créer un nom pour cette messagerie. Sinon, le serveur va donner un nom par défaut.
+Le champ de texte doit être EXTE(nom de messagerie) <CRLF>.
+
+2.4.5.  type = 28 (0x1C): Changer nom de messagerie
+
+Envoyé depuis un client vers le serveur. Tous les clients dans une messagerie peuvent changer le nom de messagerie.
+Le champ de texte doit être EXTE(nom de messagerie) <CRLF>.
+
+
+
+SHEN                     Expires August 26, 2017                [Page 9]
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+2.5.  Format de 4er Paquet
+
+
+
+                    0                   1                   2                   3
+     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |numéro de séquence|  type     |  texte length                  |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |nom de messagerie |S|  nom d'utilisateur    |    length        |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     .                                                               .
+     .                                                               .
+     .                                                               .
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |nom de messagerie |s|  nom d'utilisateur    |    length        |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+                                 Figure 4
+
+
+
+Nom de messagerie (10 bits)
+Ce champ contient la liste des noms de messagrie.
+Ce champ peut être vide.
+
+S--statut (1 bits)
+Ce champ contient le statut de client 
+
+0 -- messagerie publique 
+1 --  messageries privées
+
+Nom d'utilisateur (12 bits)
+Ce champ contient la liste des noms d'utilisateur.
+
+Length (9 bits)
+Définir le length de nom de messagerie et de nom d'utilisateur.
+
+
+2.5.1.  type = 29 (0x1D): Liste d'utilisateur
+
+Quand un client demande de liste des utilisateurs actuellement connectés au serveur.  Le serveur doit renvoyer la liste des noms d'utilisateur et le nom de messagerie qu'ils restent, ainsi que leur statut.
+
+
+
+
+
+
+
+
+
+
+SHEN                     Expires August 26, 2017                [Page 10]
+
+
+
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+
+3.  Fiabilité
+
+Ce protocole devra fonctionner au-dessus d'UDP et assurer la fiabilité de la liaison.  Ceci signifie que si un message est perdu sur le réseau entre le client et le serveur ou entre le serveur et le client,ce message devra être retransmis jusqu'é réception de ce dernier ou alors jusqu'à ce qu'un nombre d'essais maximum ait été atteint. De plus, afin de ne pas surcharger le serveur, les clients devraient attendre au moins 2 seconds avant renvoyer un message.
+
+
+
 
 4.  Serveur Configuration
 
-   Chaque serveur doit maintenir une base de donnees locale mappant noms
-   a l'adresse IP.  C'est-a-dire un nom d'utilisateur doit correspondre
-   avec une seule adresse IP.
-
-5.  Exemple des scenarios d'usage
-
-   Pour simuler un scenario d'usage, on suppose que le client Lucy a
-   deja connecte le serveur et son statut est public.
-
-Client                               Server                           Client
-(Sheng)                                                               (Lucy)
-   |                                    |                                |
-   |               connexion1           |                                |
-   |----------------------------------->|                                |
-   |                'Lucy'              |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |           ConnexionInvalide        |                                |
-   |<-----------------------------------|                                |
-   |      'nom de client deja utilise'  |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |              connexion2            |                                |
-   |----------------------------------->|                                |
-   |              'Sheng'               |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |                 ACK1               |                                |
-   |<-----------------------------------|                                |
-   |                                    |                                |
+Chaque serveur doit maintenir une base de données locale mappant noms à l'adresse IP.  C'est-à-dire un nom d'utilisateur doit correspondre avec une seule adresse IP.
 
 
+5.  Exemple des scénarios d'usage
 
-SHEN                     Expires August 19, 2017                [Page 8]
-
-                       Specification du Protocole           Fevrier 2017
+5.1 Scénario 1 : Communication Simple 
 
+Pour simuler un scénario d'usage, on suppose que le client Lucy a déjà connecté le serveur et son statut est public.
 
-   |                                    |                                |
-   |                                    |                                |
-   |      envoyer un message a Bob      |                                |
-   |------------------------------->X   |                                |
-   |               'Bonjour'            |                                |
-   |                                    |                                |
-   |      envoyer un message a Bob      |                                |
-   |----------------------------------->|                                |
-   |                'Bonjour'           |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |          EnvoieInvalide            |                                |
-   |<-----------------------------------|                                |
-   |   'nom de recepteur n'existe pas'  |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |         Demande de liste           |                                |
-   |----------------------------------->|                                |
-   |                                    |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |           liste d'utilsateur       |                                |
-   |<-----------------------------------|                                |
-   |           'publique, Lucy'         |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |       envoyer un message a Lucy    |                                |
-   |----------------------------------->|                                |
-   |               'Bonjour'            |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |                 ACK2               |       diffuser un message1     |
-   |<-----------------------------------|------------------------------->|
-   |                                    |      'Bonjour, Sheng envoie'   |
-   |                                    |                                |
-   |                                    |              ACK3              |
-   |                                    |<-------------------------------|
-   |                                    |                                |
-   |                                    |                                |
-   |                                    |  envoyer un message a Sheng    |
-   |                                    |<-------------------------------|
-   |                                    |      'Bonjour, Sheng!'         |
-   |                                    |                                |
-   |      diffuser un message2          |         ACK4                   |
-   |<-----------------------------------|------------------------------->|
-   |      'Bonjour, Sheng! Lucy envoie' |                                |
-   |                                    |                                |
-   |                                    |                                |
+   Client                               Server                           Client
+   (Sheng)                                                               (Lucy)
+      |                                    |                                |
+      |               connexion1           |                                |
+      |----------------------------------->|                                |
+      |                'Lucy'              |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |           ConnexionInvalide        |                                |
+      |<-----------------------------------|                                |
+      |      'nom de client déjà utilisé'  |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |              connexion2            |                                |
+      |----------------------------------->|                                |
+      |              'Sheng'               |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |                 ACK1               |                                |
+      |<-----------------------------------|                                |
+      |                                    |                                |
+      |                                    |                                |
+      |                                    |                                |
 
 
-
-SHEN                     Expires August 19, 2017                [Page 9]
-
-                       Specification du Protocole           Fevrier 2017
+SHEN                     Expires August 26, 2017                [Page 11]
 
 
-   |            ACK5                    |                                |
-   |----------------------------------->|                                |
-   |                                    |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |  Invitation a une messagerie prive |                                |
-   |----------------------------------->|                                |
-   |      'Sheng,Lucy'                  |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |    offrir deux modes en privee     |                                |
-   |<-----------------------------------|                                |
-   |    'centralise ou decentralise'    |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |     choisir le mode centralise     |                                |
-   |----------------------------------->|                                |
-   |       'centralise'                 |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |              ACK6                  |Invitation a la messagerie prive|
-   |<-----------------------------------|------------------------------->|
-   |                                    |'Sheng vous invite messagerie'  |
-   |                                    |                                |
-   |                                    |    Accepter une invitation     |
-   |                                    |<-------------------------------|
-   |         InvitationValide           |                                |
-   |<-----------------------------------|                                |
-   |                                    |                                |
-   |        envoyer un message3         |                                |
-   |----------------------------------->|                                |
-   |            'Rebonjour'             |                                |
-   |                                    |                                |
-   |                ACK7                |       diffuser un message3     |
-   |<-----------------------------------|------------------------------->|
-   |                                    |       'Rebonjour,shen envoie'  |
-   |                                    |                                |
-   |                                    |                                |
-   |                                    |              ACK8              |
-   |                                    |<-------------------------------|
-   |                                    |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |                                    |       envoyer un message4      |
-   |                                    |<-------------------------------|
-   |                                    |            'Rebonjour'         |
-   |                                    |                                |
-   |          diffuser un message4      |           ACK9                 |
+Internet-Draft         Specification du Protocole           Fevrier 2017
 
 
+      |      envoyer un message à Bob      |                                |
+      |------------------------------->X   |                                |
+      |               'Bonjour'            |                                |
+      |                                    |                                |
+      |      envoyer un message à Bob      |                                |
+      |----------------------------------->|                                |
+      |                'Bonjour'           |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |          EnvoieInvalide            |                                |
+      |<-----------------------------------|                                |
+      |   'nom de récepteur n'existe pas'  |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |         Demande de liste           |                                |
+      |----------------------------------->|                                |
+      |                                    |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |           liste d'utilisateur      |                                |
+      |<-----------------------------------|                                |
+      |           'publique, Lucy'         |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |       envoyer un message à Lucy    |                                |
+      |----------------------------------->|                                |
+      |               'Bonjour'            |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |                 ACK2               |       diffuser un message1     |
+      |<-----------------------------------|------------------------------->|
+      |                                    |      'Bonjour, Sheng envoie'   |
+      |                                    |                                |
+      |                                    |              ACK3              |
+      |                                    |<-------------------------------|
+      |                                    |                                |
+      |                                    |                                |
+      |                                    |  envoyer un message à Sheng    |
+      |                                    |<-------------------------------|
+      |                                    |      'Bonjour, Sheng!'         |
+      |                                    |                                |
+      |      diffuser un message2          |         ACK4                   |
+      |<-----------------------------------|------------------------------->|
+      |      'Bonjour, Sheng! Lucy envoie' |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |            ACK5                    |                                |
+      |----------------------------------->|                                |
 
-SHEN                     Expires August 19, 2017               [Page 10]
-
-                       Specification du Protocole           Fevrier 2017
+SHEN                     Expires August 26, 2017               [Page 12]
 
 
-   |<-----------------------------------|------------------------------->|
-   |         'Rebonjour,Lucy envoie'    |                                |
-   |                                    |                                |
-   |          ACK10                     |                                |
-   |----------------------------------->|                                |
-   |                                    |                                |
-   |                                    |                                |
-   |      quitter la messagerie         |                                |
-   |----------------------------------->|                                |
-   |                                    |                                |
-   |                                    |                                |
-   |                                    |                                |
-   |           ACK11                    |compter                         |
-   |<-----------------------------------|----- nombre du client          |
-   |                                    |    | a cette                   |
-   |                                    |    |messagerie                 |
-   |                                    |<---|                           |
-   |                                    |       fermer une messagerie    |
-   |                                    |------------------------------->|
-   |                                    |  'fermer cette messagerie car  |
-   |                                    |   il reste seule personne '    |
-   |                                    |                                |
-   |     Deconnexion                    |                                |
-   |----------------------------------->|                                |
-   |                                    |                                |
-   |                                    |                                |
-   |          ACK12                     |                                |
-   |<-----------------------------------|                                |
-   |                                    |                                |
-   |                                    |                                |
+Internet-Draft         Specification du Protocole           Fevrier 2017
 
-   detail de scenario (en hexadecimal 0x):
+
+      |                                    |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |  Invitation à une messagerie privée|                                |
+      |----------------------------------->|                                |
+      |      'Sheng,Lucy'                  |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |    offrir deux modes en privée     |                                |
+      |<-----------------------------------|                                |
+      |    'centralisé ou décentralisé'    |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |     choisir la mode centralisé     |                                |
+      |----------------------------------->|                                |
+      |       'centralisé'                 |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |              ACK6                  |Invitation à la messagerie prive|
+      |<-----------------------------------|------------------------------->|
+      |                                    |'Sheng vous invite messagerie'  |
+      |                                    |                                |
+      |                                    |    Accepter une invitation     |
+      |                                    |<-------------------------------|
+      |         InvitationValide           |                                |
+      |<-----------------------------------|                                |
+      |                                    |                                |
+      |        envoyer un message3         |                                |
+      |----------------------------------->|                                |
+      |            'Rebonjour'             |                                |
+      |                                    |                                |
+      |                ACK7                |       diffuser un message3     |
+      |<-----------------------------------|------------------------------->|
+      |                                    |       'Rebonjour,shen envoie'  |
+      |                                    |                                |
+      |                                    |                                |
+      |                                    |              ACK8              |
+      |                                    |<-------------------------------|
+      |                                    |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |                                    |       envoyer un message4      |
+      |                                    |<-------------------------------|
+      |                                    |            'Rebonjour'         |
+      |                                    |                                |
+      |          diffuser un message4      |           ACK9                 |
+      |<-----------------------------------|------------------------------->|
+      |         'Rebonjour,Lucy envoie'    |                                |
+
+SHEN                     Expires August 26, 2017               [Page 13]
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+      |                                    |                                |
+      |          ACK10                     |                                |
+      |----------------------------------->|                                |
+      |                                    |                                |
+      |                                    |                                |
+      |      quitter la messagerie         |                                |
+      |----------------------------------->|                                |
+      |                                    |                                |
+      |                                    |                                |
+      |                                    |                                |
+      |           ACK11                    |compter                         |
+      |<-----------------------------------|----- nombre du client          |
+      |                                    |    | à cette                   |
+      |                                    |    |messagerie                 |
+      |                                    |<---|                           |
+      |                                    |       fermer une messagerie    |
+      |                                    |------------------------------->|
+      |                                    |  'fermer cette messagerie car  |
+      |                                    |   il reste seule personne '    |
+      |                                    |                                |
+      |     Déconnexion                    |                                |
+      |----------------------------------->|                                |
+      |                                    |                                |
+      |                                    |                                |
+      |          ACK12                     |                                |
+      |<-----------------------------------|                                |
+      |                                    |                                |
+      |                                    |                                |
+
+   détail de scénario 1 (en hexadecimal 0x):
 
    connexion1:
 
-      numero de sequence = 00
-      type = 01
-      texte length = 04
-      texte: 6c 75 63 79 0a
+     numéro de séquence = 00
+     type = 01
+     texte length = 04
+     texte: 6c 75 63 79 0a
 
    ConnexionInvalide :
 
-      numero de sequence = 00
-      type = 02
-      texte length = 19
-      texte: 6e 6f 6d 20 64 65 20 63 6c 69 65 6e 74 20 64 65 6a 61 20 75
-      74 69 6c 69 73 65
-
-
-
-
-SHEN                     Expires August 19, 2017               [Page 11]
-
-                       Specification du Protocole           Fevrier 2017
-
+     numéro de séquence = 00
+     type = 02
+     texte length = 19
+     texte: 6e 6f 6d 20 64 65 20 63 6c 69 65 6e 74 20 64 65 6a 61 20 75
+     74 69 6c 69 73 65
 
    connexion2 :
 
-      numero de sequence = 01
-      type = 01
-      texte length = 04
-      texte: 53 68 65 6e 67
+
+
+SHEN                     Expires August 26, 2017               [Page 14]
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+     numéro de séquence = 01
+     type = 01
+     texte length = 04
+     texte: 53 68 65 6e 67
 
    ACK1 :
 
-      numero de sequence = 01
-      type = 08
+     numéro de séquence = 01
+     type = 0A
 
-   envoyer un message a Bob :
+   envoyer un message à Bob :
 
-      numero de sequence = 02
-      type = 12
-      texte length = 06
-      texte: 42 6f 6e 6a 6f 75 72
+     numéro de séquence = 02
+     type = 16
+     texte length = 06
+     texte: 42 6f 6e 6a 6f 75 72
 
-   InvalideEnvoie :
+   EnvoieInvalide :
 
-      numero de sequence = 02
-      type = 0E
-      texte length = 1D
-      texte: 6e 6f 6d 20 64 65 20 72 65 63 65 70 74 65 75 72 20 6e 27 65
-      78 69 73 74 65 20 70 61 73
+     numéro de séquence = 02
+     type = 12
+     texte length = 1D
+     texte: 6e 6f 6d 20 64 65 20 72 65 63 65 70 74 65 75 72 20 6e 27 65
+     78 69 73 74 65 20 70 61 73
 
    Demande de liste :
 
-      numero de sequence = 03
-      type = 04
+     numéro de séquence = 03
+     type = 04
 
    liste d'utilsateur :
 
-      numero de sequence = 03
-      type = 15
-      texte length = 0D
-      texte: 70 75 62 6c 69 71 75 65 2c 20 4c 75 63 79
+     numéro de séquence = 03
+     type = 1D
+     texte length = 0D
+     texte: 70 75 62 6c 69 71 75 65 2c 20 4c 75 63 79
 
    envoyer un message a Lucy :
 
-      numero de sequence = 04
-      type = 12
-      texte length = 06
-      texte: 42 6f 6e 6a 6f 75 72
+     numéro de séquence = 04
+     type = 16
+     texte length = 06
+     texte: 42 6f 6e 6a 6f 75 72
 
    ACK2 :
 
+     numéro de séquence = 04
+     type = 0A
 
 
 
-SHEN                     Expires August 19, 2017               [Page 12]
-
-                       Specification du Protocole           Fevrier 2017
+SHEN                     Expires August 26, 2017               [Page 15]
 
 
-      numero de sequence = 04
-      type = 08
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
 
    diffuser un message1 :
 
-      numero de sequence = 04
-      type = 09
-      texte length = 14
-      texte: 42 6f 6e 6a 6f 75 72 2c 20 53 68 65 6e 67 20 65 6e 76 6f 69
-      65
+     numéro de séquence = 04
+     type = 17
+     texte length = 14
+     texte: 42 6f 6e 6a 6f 75 72 2c 20 53 68 65 6e 67 20 65 6e 76 6f 69
+     65
 
    ACK3 :
 
-      numero de sequence = 04
-      type = 08
+     numéro de séquence = 04
+     type = 0A
 
-   envoyer un message a Sheng :
+   envoyer un message à Sheng :
 
-      numero de sequence = 05
-      type = 12
-      texte length = 0E
-      texte: 42 6f 6e 6a 6f 75 72 2c 20 53 68 65 6e 67 21
+     numéro de séquence = 05
+     type = 16
+     texte length = 0E
+     texte: 42 6f 6e 6a 6f 75 72 2c 20 53 68 65 6e 67 21
 
    diffuser un message2 :
 
-      numero de sequence = 05
-      type = 09
-      texte length = 1A
-      texte: 42 6f 6e 6a 6f 75 72 2c 20 53 68 65 6e 67 21 20 4c 75 63 79
-      20 65 6e 76 6f 69 65
+     numéro de séquence = 05
+     type = 17
+     texte length = 1A
+     texte: 42 6f 6e 6a 6f 75 72 2c 20 53 68 65 6e 67 21 20 4c 75 63 79
+     20 65 6e 76 6f 69 65
 
    ACK4 :
 
-      numero de sequence = 05
-      type = 08
+     numéro de séquence = 05
+     type = 0A
 
    ACK5 :
 
-      numero de sequence = 05
-      type = 08
+     numéro de séquence = 05
+     type = 0A
 
-   Invitation a une messagerie prive :
+   Invitation à une messagerie privée :
 
-      numero de sequence = 06
-      type = 13
-      texte length = 09
-      texte: 53 68 65 6e 67 2c 4c 75 63 79
+     numéro de séquence = 06
+     type = 18
+     texte length = 09
+     texte: 53 68 65 6e 67 2c 4c 75 63 79
 
+   offrir deux modes en privée :
 
-
-
-SHEN                     Expires August 19, 2017               [Page 13]
-
-                       Specification du Protocole           Fevrier 2017
+     numéro de séquence = 06
 
 
-   offrir deux modes en privee :
 
-      numero de sequence = 06
-      type = 0A
-      texte length = 19
-      texte: 63 65 6e 74 72 61 6c 69 73 65 20 6f 75 20 64 65 63 65 6e 74
-      72 61 6c 69 73 65
+SHEN                     Expires August 26, 2017               [Page 16]
 
-   choisir le mode centralise :
 
-      numero de sequence = 07
-      type = 14
-      texte length = 09
-      texte: 63 65 6e 74 72 61 6c 69 73 65
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+     type = 0C
+     texte length = 19
+     texte: 63 65 6e 74 72 61 6c 69 73 65 20 6f 75 20 64 65 63 65 6e 74
+     72 61 6c 69 73 65
+
+   choisir la mode centralisé :
+
+     numéro de séquence = 07
+     type = 19
+     texte length = 09
+     texte: 63 65 6e 74 72 61 6c 69 73 65
 
    ACK6 :
 
-      numero de sequence = 07
-      type = 08
+     numéro de séquence = 07
+     type = 0A
 
-   Invitation a la messagerie prive :
+   Invitation à la messagerie privée :
 
-      numero de sequence = 08
-      type = 13
-      texte length = 1B
-      texte: 53 68 65 6e 67 20 76 6f 75 73 20 69 6e 76 69 74 65 20 6d 65
-      73 73 61 67 65 72 69 65
+     numéro de séquence = 08
+     type = 18
+     texte length = 1B
+     texte: 53 68 65 6e 67 20 76 6f 75 73 20 69 6e 76 69 74 65 20 6d 65
+     73 73 61 67 65 72 69 65
 
    Accepter une invitation :
 
-      numero de sequence = 08
-      type = 05
+     numéro de séquence = 08
+     type = 05
 
    InvitationValide :
 
-      numero de sequence = 08
-      type = 0B
+     numéro de séquence = 08
+     type = 0E
 
    envoyer un message3 :
 
-      numero de sequence = 09
-      type = 12
-      texte length = 08
-      texte: 52 65 62 6f 6e 6a 6f 75 72
+     numéro de séquence = 09
+     type = 16
+     texte length = 08
+     texte: 52 65 62 6f 6e 6a 6f 75 72
 
    ACK7 :
 
-      numero de sequence = 09
-
-
-
-SHEN                     Expires August 19, 2017               [Page 14]
-
-                       Specification du Protocole           Fevrier 2017
-
-
-      type = 08
+     numéro de séquence = 09
+     type = 0A
 
    diffuser un message3 :
 
-      numero de sequence = 0A
-      type = 09
-      texte length = 14
-      texte: 52 65 62 6f 6e 6a 6f 75 72 2c 73 68 65 6e 20 65 6e 76 6f 69
-      65
+
+
+SHEN                     Expires August 26, 2017               [Page 17]
+
+
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+     numéro de séquence = 0A
+     type = 17
+     texte length = 14
+     texte: 52 65 62 6f 6e 6a 6f 75 72 2c 73 68 65 6e 20 65 6e 76 6f 69
+     65
 
    ACK8 :
 
-      numero de sequence = 0A
-      type = 08
+     numéro de séquence = 0A
+     type = 0A
 
    envoyer un message4 :
 
-      numero de sequence = 0B
-      type = 12
-      texte length = 08
-      texte: 52 65 62 6f 6e 6a 6f 75 72
+     numéro de séquence = 0B
+     type = 16
+     texte length = 08
+     texte: 52 65 62 6f 6e 6a 6f 75 72
 
    ACK9 :
 
-      numero de sequence = 0B
-      type = 08
+     numéro de séquence = 0B
+     type = 0A
 
    diffuser un message4 :
 
-      numero de sequence = 0C
-      type = 09
-      texte length = 14
-      texte: 52 65 62 6f 6e 6a 6f 75 72 2c 4c 75 63 79 20 65 6e 76 6f 69
-      65
+     numéro de séquence = 0C
+     type = 17
+     texte length = 14
+     texte: 52 65 62 6f 6e 6a 6f 75 72 2c 4c 75 63 79 20 65 6e 76 6f 69
+     65
 
    ACK10 :
 
-      numero de sequence = 0C
-      type = 08
+     numéro de séquence = 0C
+     type = 0A
 
    quitter la messagerie :
 
-      numero de sequence = 0D
-      type = 07
+     numéro de séquence = 0D
+     type = 07
 
    ACK11 :
 
-      numero de sequence = 0D
+     numéro de séquence = 0D
+     type = 0A
+
+   compter nombre du client à cette messagerie :
 
 
 
-SHEN                     Expires August 19, 2017               [Page 15]
-
-                       Specification du Protocole           Fevrier 2017
+
+SHEN                     Expires August 26, 2017               [Page 18]
 
 
-      type = 08
 
-   compter nombre du client a cette messagerie :
+Internet-Draft         Specification du Protocole           Fevrier 2017
 
-      numero de sequence = 0E
-      type = 0C
+
+     numéro de séquence = 0E
+     type = 10
 
    fermer une messagerie :
 
-      numero de sequence = 0F
-      type = 0D
-      texte length = 22
-      texte: 66 65 72 6d 65 72 20 63 65 74 74 65 20 6d 65 73 73 61 67 65
-      72 69 65 20 63 61 72 20 69 6c 20 72 65 73 74 65 20 73 65 75 6c 65
-      20 70 65 72 73 6f 6e 6e 65
+     numéro de séquence = 0F
+     type = 11
+     texte length = 22
+     texte: 66 65 72 6d 65 72 20 63 65 74 74 65 20 6d 65 73 73 61 67 65
+     72 69 65 20 63 61 72 20 69 6c 20 72 65 73 74 65 20 73 65 75 6c 65
+     20 70 65 72 73 6f 6e 6e 65
 
-   Deconnexion :
+   Déconnexion :
 
-      numero de sequence = 10
-      type = 03
+     numéro de séquence = 10
+     type = 03
 
    ACK12 :
 
-      numero de sequence = 10
-      type = 08
+     numéro de séquence = 10
+     type = 0A
 
-Author's Address
+
+
+
+5.2 Scénario 2: Communiation dans une messagerie privée.
+
+Ce scénario explique l'opération dans une messagerie. Pour un manager dont un client fait un invitation à une messagerie, peut choisir et changer la mode de serveur. Il peut aussi dissoudre une messagerie privée.
+Pour bien l'explquer, on suppose qu'il exsite 3 clients, Sheng,Lucy,Bob, dans le serveur, et Bob existe dans la messagerie 1 dont son nom est “dota2”. De plus, Sheng et Lucy existe dans la messagerie 2 dont son nom est “lol”. La mode de serveur est centralisé.
+
+
+Sheng               Serveur                  Lucy                     Bob
+
+|  envoyer un message1 |                       |                       |
+|--------------------->|                       |                       |
+|       à Lucy         |                       |                       |
+|     'Noob,lol'       |                       |                       |
+|                      |                       |                       |
+|         ACK1         |   diffuse un message1 |                       |
+|<---------------------|---------------------->|                       |
+|                      |'Noob,lol,sheng envoie'|                       |  
+|                      |                       |                       |
+|                      |       ACK2            |                       |
+|                      |<----------------------|                       |  
+|                      |                       |                       |                                    
+|                      |                       |                       |
+
+
+
+SHEN                     Expires August 26, 2017               [Page 19]
+
+
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+|                      |                       |                       |
+|   changer la mode    |                       |                       |
+|--------------------->| diffuse un message3   |                       |                  
+|  ’décentralisé'      |---------------------->|                       |
+|                      |'manager change la mode|                       |
+|                      |vous être d'accord？ ‘      |                       |
+| 				         |                       |                       |
+| 				         |     ACK3              |                       |                       
+|                      |<----------------------|                       |                                               
+|    ACK4              |'je suis d'accord'     |                       |
+|<---------------------|                       |                       |
+| 				         |                       |                       |
+|   envoie un message4                         |                       |
+|--------------------------------------------->|                       |
+|                ’ggwp‘                        |                       |
+|            ACK5                              |                       |
+|<---------------------------------------------|                       |                                       
+| 				                                 |                       |
+| 				            demande de participer à une messagerie privée|
+|  diffuse un message5 |<----------------------------------------------|
+|<---------------------|                       |                       |
+|'Bob demande d'entrer'|                       |                       |
+| 				         |                       |                       |
+| 				         |                       |                       |
+|     ACK6  			  |                       |                       |
+|--------------------->|                      ACK7                     |
+|'je suis d'accord'    |---------------------------------------------->|
+| 				         |            'Bienvenue Bob'                    | 
+.                      .                       .                       .
+.                      .                       .                       .
+.                      .                       .                       .
+| 				         |                       |                       |
+|  dissoudre une       |                       |                       |
+|--------------------->|                       |                       |
+|  messagerie privée   |                       |                       |
+|                      |                       |                       |
+|  ACK8                |     ACK9              |                       |
+|<---------------------|---------------------->|         ACK9          |          
+|                      |---------------------------------------------->|
+|                      |'manager dissou cette messagerie privée'       |
+|                      |                       |                       |
+|                      |                       |                       |
+
+
+
+détail de scénario 2 (en hexadecimal 0x):
+
+envoyer un message1  à Lucy : 
+
+     numéro de séquence = 00
+     type = 16
+     texte length = 07
+     texte: 4e 6f 6f 62 2c 6c 6f 6c
+
+
+
+SHEN                     Expires August 26, 2017               [Page 20]
+
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+ACK1 :
+
+     numéro de séquence = 00
+     type = 0A
+
+diffuse un message1 :
+
+     numéro de séquence = 01
+     type = 17
+     texte length = 14
+     texte: 4e 6f 6f 62 2c 6c 6f 6c 2c 73 68 65 6e 67 20 65 6e 76 6f 69 65
+
+
+ACK2 :
+
+     numéro de séquence = 01
+     type = 0A
+
+changer la mode :
+
+     numéro de séquence = 02
+     type = 1A
+     mode = 01
+
+diffuse un message3 :
+
+     numéro de séquence = 03
+     type = 17
+     texte length = 2A
+     texte: 6d 61 6e 61 67 65 72 20 63 68 61 6e 67 65 20 6c 61 20 6d 6f 64 65 20 76 			6f 75 73 20 ea 74 72 65 20 64 27 61 63 63 6f 72 64 ff 1f
+
+ACK3 : 
+
+     numéro de séquence = 03
+     type = 0A
+     texte:  6a 65 20 73 75 69 73 20 64 27 61 63 63 6f 72 64
+
+ACK4 :
+
+     numéro de séquence = 02
+     type = 0A
+
+envoie un message4 :
+     numéro de séquence = 04
+     type = 16
+     texte length = 04
+     texte: 67 67 77 70
+
+
+
+
+SHEN                     Expires August 26, 2017               [Page 21]
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+
+ACK5 :
+
+     numéro de séquence = 04
+     type = 0A
+
+demande de participer à une messagerie privée :
+
+     numéro de séquence = 05
+     type = 08
+
+diffuse un message5 :
+
+     numéro de séquence = 06
+     type = 17
+     texte length = 13
+     texte: 42 6f 62 20 64 65 6d 61 6e 64 65 20 64 27 65 6e 74 72 65 72
+
+ACK6 :
+ 
+     numéro de séquence = 06
+     type = 0A
+     texte:  6a 65 20 73 75 69 73 20 64 27 61 63 63 6f 72 64
+
+ACK7 : 
+
+     numéro de séquence = 05
+     type = 0A
+     texte:  42 69 65 6e 76 65 6e 75 65 20 42 6f 62
+
+dissoudre une messagerie privée :
+
+     numéro de séquence = 07
+     type = 09
+
+ACK8 
+
+     numéro de séquence = 07
+     type = 0A
+
+ACK9 
+
+     numéro de séquence = 07
+     type = 0A
+    texte:  6d 61 6e 61 67 65 72 20 64 69 73 73 6f 75 20 63 65 74 74 65 20 6d 65 73 73 61 67 65 72 69 65 20 70 72 69 76 e9 65
+
+
+
+
+
+SHEN                     Expires August 26, 2017               [Page 22]
+
+
+
+
+
+
+
+
+Internet-Draft         Specification du Protocole           Fevrier 2017
+
+
+6.  Références
+
+Adresse d'Auteur 
 
    Sheng SHEN
-   Telecom Bretagne
+   Télécom Bretagne
    Brest
    France
 
@@ -893,4 +1248,31 @@ Author's Address
 
 
 
-SHEN                     Expires August 19, 2017               [Page 16]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+SHEN                     Expires August 26, 2017               [Page 23]
+
+
+
