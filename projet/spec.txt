@@ -5,7 +5,7 @@
 Network Working Group                                            S. SHEN
 Internet-Draft                                          Télécom Bretagne
 Intended status: Informational                              Février 2017
-Expires: August 26, 2017
+          Expires: August 26, 2017
 
 
                 Spécification du Protocole(Version 1.0)
@@ -52,8 +52,8 @@ Sommaire
 		limitation de nombre de groupe  . . . . . . . . . . . . . . . 7
 
 
-
 SHEN                     Expires August 26, 2017                [Page 1]
+
 
 Internet-Draft         Specification du Protocole           Fevrier 2017   
 
@@ -79,15 +79,13 @@ Internet-Draft         Specification du Protocole           Fevrier 2017
 
 1.  Introduction
 
-L'objectif du protocole est de permettre aux utilisateurs de se connecter à un serveur et pouvoir échanger des messages. Il permet aussi de créer une messagerie privée ainsi que participer à la messagerie, et puisque des utilisateurs peuvent initier une messagerie privée, en choisissant les deux modes, centralisé ou décentralisé pour les messageries privées.
+L'objectif du protocole est de permettre aux utilisateurs de se connecter à un serveur et pouvoir échanger des messages. Il permet aussi de créer une messagerie privée ainsi que participer à la messagerie, et puisque des utilisateurs peuvent initier une messagerie privée, en choisissant les deux modes, centralisé ou décentralisé pour les messageries privées. De plus, un mangager qui fait une invitation à une messagerie peut controler cette messagerie privée comme changer la mode de serveur dans une messagrie privée et créer un nom pour son messagerie privée. Tous le monde qui est dans leur messagerie privée peut changer un nom pour son messagerie privée.  
 
 
 2.  Description
-
 2.1.  Contraintes
 
 On utilise une unique trame pour chaque message, et ce protocole devra fonctionner au-dessus d'UDP.  Toutes les adresses IP doivent être des adresses IPv4 valides.
-
 Par défaut, on suppose que dans ce serveur de communication, il y a seule messagerie publique et il peut exister plusieurs messageries privées.
 
 Ce tableau définit la longueur maximale de quelques éléments.
@@ -96,7 +94,7 @@ Ce tableau définit la longueur maximale de quelques éléments.
            |               élément                              |   taille   |
            +----------------------------------------------------+------------+
            |           nombre de client                         |    1024    |
-           |     caractères du nom de client                    |     20     |
+           |     caractères du nom de client                    |     30     |
            |             Texte message                          | 1024 bytes |
            |    nombre de messagerie privée simultané           |    100     |
            | nombre de limtation de personne dans une messagerie|    100     |
@@ -104,9 +102,7 @@ Ce tableau définit la longueur maximale de quelques éléments.
 
                           Table 1: Value maximum
 
-
 SHEN                     Expires August 26, 2017                [Page 2]
-
 
 Internet-Draft         Specification du Protocole           Fevrier 2017
 
@@ -136,7 +132,7 @@ Dans ce protocole, le format de paquet n'est pas le même pour tous les messages
 
 Numéro de séquence (10 bits) 
 
-Ce champ définie le numéro de séquence du message.  Pour chaque client ou le serveur, nous définissons un numéro de séquence unique qui augmente lors de l'envoi d'un paquet de message ou la réponse d'un paquet de message (pour un type donné, l'expediteur soit le client soit le serveur, incrémente le numéro de séquence chaque fois qu'il envoie un nouveau paquet).
+Ce champ définit le numéro de séquence du message.  Pour chaque client ou le serveur, nous définissons un numéro de séquence unique qui augmente lors de l'envoi d'un paquet de message ou la réponse d'un paquet de message (pour un type donné, l'expediteur soit le client soit le serveur, incrémente le numéro de séquence chaque fois qu'il envoie un nouveau paquet).
 
 Type (8 bits) 
 
@@ -213,24 +209,21 @@ Le champ de texte doit être vide.
 
 
 
-
-
 SHEN                     Expires August 26, 2017                [Page 4]
 
 
 Internet-Draft         Specification du Protocole           Fevrier 2017
 
 
-
 2.2.8.  type = 8 (0x08): Demander de participer à une messagerie privée
 
-Envoyé depuis un client vers le serveur pour indique un utilisateur voudrait demander de participer à une messagerie privée. Noms de messageries doivent être identifiés par le serveur via l'adresse IP.  
+Envoyé depuis un client vers le serveur pour indique un utilisateur voudrait demander de participer à une messagerie privée. Si un client qui a déjà existé dans une messagerie, vourait participer à l'autre messagerie privée, il peut   directement changer sa messagerie mais il n'existe plus dans la messagerie dernière. Noms de messageries doivent être identifiés par le serveur via l'adresse IP.  
 Le champ de texte doit être TEXTE(nom de messagerie) <CRLF>.
 
 
 2.2.9.  type = 9 (0x09): Dissoudre une messagerie privée
 
-Envoyé depuis un client vers le serveur pour indique un manager d'utilisateur  dans une messagerie privée voudrait dissoudre cette messagerie privée.   
+Envoyé depuis un client vers le serveur pour indique un manager d'utilisateur  dans une messagerie privée peut dissoudre cette messagerie privée.   
 Le champ de texte doit être vide.
 
 
@@ -250,7 +243,7 @@ Le champ de texte doit être TEXTE(Nom de client récepteur n'existe pas) <CRLF>
 
 2.2.12.  type = 12 (0x0C): offrir deux modes de messagerie privée
 
-Lorsqu'un client demande une invitation a une messagerie privée, le serveur devra offrir deux options afin qu'un client puisse, en précisant les modes centralisé ou décentralisé.  
+Lorsqu'un client demande une invitation à une messagerie privée, le serveur devra offrir deux options afin qu'un client puisse, en précisant les modes centralisé ou décentralisé.  
 Le champ de texte doit être TEXTE(centralisé ou décentralisé) <CRLF>
 
 
