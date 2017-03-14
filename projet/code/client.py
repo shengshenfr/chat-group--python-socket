@@ -3,25 +3,15 @@ import sys,os
 import ctypes
 import struct
 import argparse
+from protocol import *
 
 
-def connection():
-    print("are you want to connect, please input your name")
-    username = input()
-    if len(username) <=8:
-        n = len(username)
-        username = username + (8-n)*'0'
-        connect = ctypes.create_string_buffer(14)
-        #put data into the buffer
-        struct.pack_into('bbbH8s', connect, 0,0x00,0x00,0x00,0x0000,str(username).encode('UTF-8'))
-        s.sendto(connect,addr)
-            
-    else:
-        print("nom is over the length")
-    
 
     
-
+    
+    
+    
+    
     
     
     

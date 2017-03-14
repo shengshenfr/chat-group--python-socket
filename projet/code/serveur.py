@@ -1,28 +1,15 @@
 import socket
 import sys,os
 import select
+import ctypes
+import struct
+import argparse
+from protocol import *
 
-def connectionAccept():
-    data,addr = s.recvfrom(1024)
-    premier = struct.unpack('>b', data[0])
-    print ("Premier element : " + str(premier[0]))
-    print ("Premier element en binaire : " + str(bin(premier[0])))
-    
-    username = struct
-    
-    print("please distribuer client ID")
-    ID = input()
-    if len(ID) <= 12:
-        n = len(ID)
-        ID =  (12-n)*'0'+ ID
-        print ("ID"+str(ID))
-    Accept = ctypes.create_string_buffer(19)
-    struct.pack_into('bbbH12sb', Accept, 0,0b00001000,0x00,0x00,0x0000,str(ID).encode('UTF-8'),0x0)
 
-#    premier=struct.unpack('bbbH12sb', Accept)
-#    print ("element : " + str(premier))
-#    print( len(Accept))
-    s.sendto(Accept,addr)
+
+
+
 
 
 PORT = 1248
@@ -54,7 +41,6 @@ while True :
 
 	    chaine = struct.unpack('3s', buf[1:4])
 	    print ("Voici la chaine de caracteres : " + chaine[0].decode('UTF-8') 
-	    if c = 
 	    print data
 	    
 	    #print(str(addr) + '\n')
