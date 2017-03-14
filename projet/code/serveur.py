@@ -8,9 +8,62 @@ from protocol import *
 
 
 
+    
 
 
+def connectionAccept(sequenceNum,A):
+    # response
+    messageType = 1
+    R = 0 
+    
+    if (A  == 1):
+        A = 0
+    else: 
+        A = 1
+    
+    value = valueControl(messageType ,R,sequenceNum,A)
 
+    print("please distribuer client ID")
+    ID = raw_input()
+    ID = int(ID)
+    print ("ID : "+str(hex(ID)))
+
+    Accept = ctypes.create_string_buffer(7)
+    struct.pack_into('bbbHb', Accept, 0,0b00001000,0x00,0x00,0x0000,ID)
+    print(Accept)
+
+    ID = struct.unpack_from('b', Accept,6)
+    clientID = ID[0]
+    print(clientID)
+    
+    
+    return Accept
+#    premier=struct.unpack('bbbH12sb', Accept)
+#    print ("element : " + str(premier))
+#    print( len(Accept))
+
+
+def connectionReject(sequenceNum,Error,A):
+    # response
+    messageType = 2
+    R = 0 
+    if (A  == 1):
+        A = 0
+    else: 
+        A = 1
+        
+    value = valueControl(messageType,R,sequenceNum,A)
+    if Error == 1:
+        print("uername already taken")
+    else :
+        print("maximum number of users exceeded")
+        
+    Error = Error<<7
+    Reject = ctypes.create_string_buffer(6)
+    struct.pack_into('bbbHb', Reject, 0,value,0x00,0x00,0x0007,Error) 
+    
+    return Reject
+    
 
 PORT = 1248
 HOST = 'localhost'
@@ -22,40 +75,29 @@ inputs = [s]
 address = []
 #while True:
     
-  
-readable,writable,exceptional = select.select(inputs,[],[], 10)
 
 #print(str(readable) + '\n')
 
 #print(str(inputs) + '\n')
 
 while True : 
-    for r in readable:	
-	if s==r:
+    data,addr = s.recvfrom(1024)
+    print (data)
 	    
-	    data,addr = s.recvfrom(1024)
-	    #receiver
-	    premier = struct.unpack('b', data[0])
-	    print ("Premier element : " + str(premier[0]))
-	    print ("Premier element en binaire : " + str(bin(premier[0])))
+    #print(str(addr) + '\n')
+    #print(str(data) + '\n')
+    address.append(addr)        
+    type = getType(data)
+    sq =  getSequenceNumber(data)
+    ACK = getACK(data)
+    
+    if type == 0:
+    #print(str(inputs) + '\n')        
+        Accept = connectionAccept
+        s.sendto(Accept,addr)
 
-	    chaine = struct.unpack('3s', buf[1:4])
-	    print ("Voici la chaine de caracteres : " + chaine[0].decode('UTF-8') 
-	    print data
-	    
-	    #print(str(addr) + '\n')
-	    #print(str(data) + '\n')
-	    address.append(addr)
-	    if data =="end":
-	    #print(str(inputs) + '\n')
-		address.remove(addr)
-		if len(address)==0:
-		    s.close()
-		    sys.exit()
-	    else:
-		for i in address:
-		    if i is not addr:
-		        s.sendto(data,i)
-
-
+    else:
+        
+        Reject = connectionReject
+        s.sendto(Reject,addr)
     
