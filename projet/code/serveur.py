@@ -8,33 +8,27 @@ from protocol import *
 
 
 
-    
 
+def connectionAccept(sequenceNum,clientID,groupID):
 
-def connectionAccept(sequenceNum,A):
     # response
     messageType = 1
     R = 0 
-    
-    if (A  == 1):
-        A = 0
-    else: 
-        A = 1
+    A = 1
     
     value = valueControl(messageType ,R,sequenceNum,A)
 
     print("please distribuer client ID")
-    ID = raw_input()
-    ID = int(ID)
-    print ("ID : "+str(hex(ID)))
+
+    print ("clientID : "+str(clientID))
 
     Accept = ctypes.create_string_buffer(7)
-    struct.pack_into('bbbHb', Accept, 0,0b00001000,0x00,0x00,0x0000,ID)
+    struct.pack_into('bbbHb', Accept, 0,0b00001000,0x00,groupID,0x0000,clientID)
     print(Accept)
 
-    ID = struct.unpack_from('b', Accept,6)
-    clientID = ID[0]
-    print(clientID)
+#    ID = struct.unpack_from('b', Accept,6)
+#    clientID = ID[0]
+#    print(clientID)
     
     
     return Accept
@@ -63,6 +57,122 @@ def connectionReject(sequenceNum,Error,A):
     struct.pack_into('bbbHb', Reject, 0,value,0x00,0x00,0x0007,Error) 
     
     return Reject
+
+
+def sendUserListResponse(sequenceNum,sourceID,userList):
+    type = 4
+    R = 0     
+    A = 1
+    value = valueControl(type,R,sequenceNum,A)
+    
+    numberUsers = len(userList)
+    length = 5 + numberUsers
+    for iUser in numberUsers:
+        clientID = userList[iUser].clentID
+        groupID = userList[iUser].groupID
+        username = userList[iUser].username
+        userListResponse = ctypes.create_string_buffer(length)
+        struct.pack_into('bbbHbb8s', userListResponse, 0,value,sourceID,0x01,length,clientID,groupID,username) 
+
+def updateList(sequenceNum,userList):
+    type = 14
+    R = 0     
+    A = 0
+    value = valueControl(type,R,sequenceNum,A)
+    sourceID = 0x00
+    
+    numberUsers = len(userList)
+    length = 5 + numberUsers
+    for iUser in numberUsers:
+        clientID = userList[iUser].clentID
+        groupID = userList[iUser].groupID
+        username = userList[iUser].username
+        updateList = ctypes.create_string_buffer(length)
+        struct.pack_into('bbbHbb8s', updateList, 0,value,sourceID,0xFF,length,clientID,groupID,username) 
+   
+def groupCreationAccept(sequenceNum,groupCreationRequest,sourceID):
+    messageType  = 7
+    R = 0     
+    A = 1
+    value = valueControl(messageType,R,sq,A)
+    
+    typeServer = getTypeServer(groupCreationRequest)
+    if typeServer == 1:
+        print("group centralized")
+    else :
+        print("group decentralized")
+        
+    typeServer = typeServer <<7
+    print("please distribuer group ID")
+    groupID = raw_input()
+    groupID = int(groupID)
+    
+    groupCreationAccept = ctypes.create_string_buffer(7)
+    struct.pack_into('bbbHbb', groupCreationAccept, 0,value,sourceID,0x00,0x0008,typeServer,groupID) 
+    
+
+def groupCreationReject(sequenceNum,sourceID):
+    messageType  = 8
+    R = 0     
+    A = 1
+    value = valueControl(messageType,R,sequenceNum,A)
+
+    groupCreationReject = ctypes.create_string_buffer(5)
+    struct.pack_into('bbbH', groupCreationReject, 0,value,sourceID,0x00,0x0006) 
+
+
+def groupInvitationRequest(sequenceNum,sourceID,typeServer,groupID):
+    messageType = 9
+    R = 0     
+    A = 0
+    value = valueControl(messageType,R,sequenceNum,A)
+    if typeServer == 1:
+        print("group centralized")
+    else :
+        print("group decentralized")
+        
+    typeServer = typeServer <<7
+
+    groupInvitationRequest = ctypes.create_string_buffer(7)
+    struct.pack_into('bbbHbb', groupInvitationRequest, 0,value,sourceID,0x00,0x0008,typeServer,groupID)     
+
+
+def groupDissolution(sequenceNum,groupID):
+    messageType = 13
+    R = 0     
+    A = 0
+    value = valueControl(messageType,R,sequenceNum,A)
+    groupDissolution = ctypes.create_string_buffer(5)
+    struct.pack_into('>BBBH', groupDissolution, 0,value,0x00,groupID,0x0006)  
+
+
+def updateDisconnection(sequenceNum,clientID,userList):
+    messageType = 15
+    R = 0     
+    A = 0
+    value = valueControl(messageType,R,sq,A)
+    userList.remove(clientID)
+
+    updateDisconnection = ctypes.create_string_buffer(6)
+    struct.pack_into('>BBBHB', updateDisconnection, 0,value,0x00,0xFF,0x0008,clientID)  
+
+
+def dataReceived(data,addr,clientID):
+    messageType = getType(data)
+    sequenceNumReceived =  getSequenceNumber(data)
+    ACK = getACK(data)    
+    
+    print("it is connection")
+    clientID += 1
+    print("clientID : "+ str(clientID))
+    groupID = 0x01
+    connectionAccept(sequenceNumReceived,clientID,groupID)
+
+
+
+
+
+
     
 
 PORT = 1248
@@ -73,31 +183,37 @@ s.bind((HOST,PORT))
 
 inputs = [s]
 address = []
-#while True:
-    
+
+userList = {}
+clientID = 0
+
+#userList[username] = [ip, port, clientID,groupID] 
+
+
+readable,writable,exceptional = select.select(inputs,[],[], 10)    
 
 #print(str(readable) + '\n')
 
 #print(str(inputs) + '\n')
 
 while True : 
-    data,addr = s.recvfrom(1024)
-    print (data)
+    for r in readable:	
+	if s==r:
 	    
-    #print(str(addr) + '\n')
-    #print(str(data) + '\n')
-    address.append(addr)        
-    type = getType(data)
-    sq =  getSequenceNumber(data)
-    ACK = getACK(data)
-    
-    if type == 0:
-    #print(str(inputs) + '\n')        
-        Accept = connectionAccept
-        s.sendto(Accept,addr)
-
-    else:
-        
-        Reject = connectionReject
-        s.sendto(Reject,addr)
+	    data,addr = s.recvfrom(1024)
+	    print data
+            dataReceived(data,addr,clientID)
+	    #print(str(addr) + '\n')
+	    #print(str(data) + '\n')
+	    address.append(addr)
+	    if data =="end":
+	    #print(str(inputs) + '\n')
+		address.remove(addr)
+		if len(address)==0:
+		    s.close()
+		    sys.exit()
+	    else:
+		for i in address:
+		    if i is not addr:              
+		        s.sendto(data,i)
     
