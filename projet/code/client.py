@@ -3,7 +3,27 @@ import sys,os
 import ctypes
 import struct
 import argparse
-from protocol import *
+from multiprocessing import Queue, Process
+import time
+
+
+
+PORT = 1250
+HOST = 'localhost'
+addr = (HOST,PORT)
+s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
+s.connect((HOST,PORT))
+
+
+sequenceNumSend = 0
+sequenceNumReceived = 0
+sourceID = 0
+groupID = 0
+clientID =0
+Qmsg = Queue()
+
+
+
 
 def valueControl(messageType,R,S,ACK):
     value = messageType    
@@ -101,38 +121,25 @@ def getPayload(dataMessage):
     return payload
 
 def getUserList(userListResponse):
-    userList = []
-    userInfomation = ()
+    userList = struct.unpack_from('16s', userListResponse,5)
+    print(userList)
     
-    offset = 5
-    dataLength = struct.unpack_from('H', userListResponse, offset)[0]
-    offset = 6
-    length = 0
-    
-    while(length<dataLength):
-        clientID = struct.unpack_from('b', userListResponse, offset)[0]
-        offset += 1
-        groupID = struct.unpack_from('b', userListResponse, offset)[0] 
-        offset += 1
-        username = struct.unpack_from('8s', userListResponse, offset)[0]
-        
-        userInfomation = clientID,groupID,username
-        userList.append(userInfomation)
     return userList        
     
 
-def acknowledgement(sequenceNumReceived,sourceID):
-    messageType = 18
+def acknowledgement(sequenceNumReceived):
+    global sourceID
+    messageType = 0x11
     R = 0     
     A = 1
     value = valueControl(messageType,R,sequenceNumReceived,A)
     groupID = 0x00
     acknowledgement = ctypes.create_string_buffer(5)
     struct.pack_into('>BBBH', acknowledgement, 0,value,sourceID,groupID,0x0006)  
-
+    return acknowledgement
 
     
-def connection(s,addr,sequenceNumSend):
+def connection(s,addr):
     print("are you want to connect, please input your username")
     username = raw_input()
     print("username :" +str(username))
@@ -148,26 +155,30 @@ def connection(s,addr,sequenceNumSend):
 
     return  connect
     
-def disconnectionRequest(sequenceNumSend,sourceID):
+def disconnectionRequest():
+    global sourceID,sequenceNumSend
     messageType = 10
     R = 0     
     A = 0 
     value = valueControl(messageType,R,sequenceNumSend,A)
     groupID = 0
     disconnectionRequest = ctypes.create_string_buffer(5)
-    struct.pack_into('>BBBH', disconnectionRequest, 0,value,sourceID,groupID,0x0006)  
+    struct.pack_into('>BBBH', disconnectionRequest, 0,value,sourceID,groupID,0x0005)  
     
     return disconnectionRequest
 
 
-def userListRequest(sequenceNumSend,sourceID):
+def userListRequest(sequenceNumSend):
+    global sourceID
     messageType = 3
     R = 0     
     A = 0
     value = valueControl(messageType,R,sequenceNumSend,A)
  
-    userListRequest = ctypes.create_string_buffer(5)
-    struct.pack_into('bbbH', userListRequest, 0,value,sourceID,0x01,0x0006) 
+    userListRequest = ctypes.create_string_buffer(6)
+    struct.pack_into('bbbH', userListRequest, 0,value,sourceID,0x01,0x0006)
+    return userListRequest    
+    
 
 def sendDataMessage(sequenceNumSend,sourceID,groupID):
     messageType = 5
@@ -231,8 +242,11 @@ def groupDisjointRequest(sequenceNum,sourceID):
     struct.pack_into('bbbH', groupDisjointRequest, 0,value,sourceID,0x00,0x0006) 
 
 
-def dataReceived(data,addr):
+def dataReceived(s,data,addr):
     global sequenceNumSend
+    global sourceID
+    global clientID
+    global groupID
     messageType = getType(data)
     print("messageType : "+ str(messageType) )
     sequenceNumReceived =  getSequenceNumber(data)
@@ -251,9 +265,10 @@ def dataReceived(data,addr):
 
             sourceID = getClientID(data)
             print("clientID : "+ str(sourceID))
-            acknowledgement(sequenceNumReceived,sourceID)
-
-#            userListRequest(sequenceNumberSend,sourceID)
+            ACK = acknowledgement(sequenceNumReceived)
+            s.sendto(ACK,addr)
+            sourceID = getClientID(data)
+            print("clientID : "+ str(sourceID))
             return messageType          
             
     elif(messageType == 0x02):
@@ -276,6 +291,7 @@ def dataReceived(data,addr):
             print("it is userList respond")
             sourceID = getClientID(data)
             print("clientID : "+ str(sourceID))
+            
             acknowledgement(type,sequenceNumReceived,sourceID)
             return messageType
             
@@ -287,6 +303,9 @@ def dataReceived(data,addr):
             sourceID = getClientID(data)
             print("clientID : "+ str(sourceID))
             
+            print("session end")
+            s.close()
+            sys.exit()            
             return messageType
             
 #    elif():
@@ -300,16 +319,10 @@ def dataReceived(data,addr):
             
             
     
-PORT = 1249
-HOST = 'localhost'
-addr = (HOST,PORT)
-s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-s.connect((HOST,PORT))
 
-global sequenceNumSend
-sequenceNumSend = 0
-sequenceNumReceived = 0
 
+print("connection")
+connect = connection(s,addr)
 
 childPid = os.fork()
 
@@ -318,19 +331,30 @@ if childPid ==0:
     while True:
         data,addr = s.recvfrom(1024)
         print(data)
-        messageType = dataReceived(data,addr)
-        if (messageType == 0x0A):
-            print("session end")
-            s.close()
-            sys.exit() 
-    
+        messageType = dataReceived(s,data,addr)
+        Qmsg.put(sourceID) 
+        Qmsg.put(groupID) 
+            
 else:
     while True:
-        print("connection")
 
-        connect = connection(s,addr,sequenceNumSend)
+        
+        if not Qmsg.empty():  
+            sourceID = Qmsg.get() 
+            print("clientID : "+ str(sourceID)) 
+            groupID = Qmsg.get()
+            print("groupID : "+ str(groupID)) 
+            
+        print ("chose type to do")
+        mType = raw_input()
 
-
+        if (mType == '3'):
+            print("userListRequest")
+            userListRequest = userListRequest(sequenceNumSend)        
+        else:
+            print("disconnection")
+#                print(sourceID)
+            disconnectionRequest = disconnectionRequest()
 
             
             

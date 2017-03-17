@@ -5,6 +5,18 @@ import ctypes
 import struct
 import argparse
 
+PORT = 1250
+HOST = 'localhost'
+
+s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)	
+s.bind((HOST,PORT))
+
+inputs = [s]
+address = []
+userList = {}
+clientID = 0
+groupID =0x01
+
 
 def valueControl(messageType,R,S,ACK):
     value = messageType<<1    
@@ -42,16 +54,19 @@ def getUsername(data):
     
     
 def getSequenceNumber(data):
-    premier = struct.unpack('>b', data[0])
-#    print ("Premier element : " + str(premier[0]))
-#    print ("Premier element en binaire : " + str(bin(premier[0])))    
-    
-    s = str(premier[0]>>1)
-
-    n = len(s)
-    print("n:"+str(n))  
-    sequenceNum = s[n-1]
-    print("senquenceNum:"+sequenceNum)
+    premier = struct.unpack('>B', data[0])
+    print ("Premier element : " + str(premier[0]))
+    print ("Premier element en binaire : " + str(bin(premier[0])))    
+    if premier[0]==0:
+        sequenceNum =0
+    else:
+        s = str(bin(premier[0]>>1))
+        print(s)
+        n = len(s)
+        print("n:"+str(n))  
+        sequenceNum = s[n-1]
+        
+    print("senquenceNum:"+str(sequenceNum))
     
     return int(sequenceNum)
 
@@ -94,7 +109,7 @@ def getTypeServer(groupCreationRequest):
     
     
 def acknowledgement(sequenceNumReceived,sourceID):
-    messageType = 18
+    messageType = 0x11
     R = 0     
     A = 1
     value = valueControl(messageType,R,sequenceNumReceived,A)
@@ -103,8 +118,8 @@ def acknowledgement(sequenceNumReceived,sourceID):
     struct.pack_into('>BBBH', acknowledgement, 0,value,sourceID,groupID,0x0006) 
 
 
-def connectionAccept(sequenceNum,clientID,groupID):
-
+def connectionAccept(sequenceNum):
+    global clientID,groupID
     # response
     messageType = 1
     R = 0 
@@ -152,20 +167,16 @@ def connectionReject(sequenceNum,Error,A):
     return Reject
 
 
-def sendUserListResponse(sequenceNum,sourceID,userList):
+def sendUserListResponse(sequenceNum,userList):
     type = 4
     R = 0     
     A = 1
     value = valueControl(type,R,sequenceNum,A)
-    
-    numberUsers = len(userList)
-    length = 5 + numberUsers
-    for iUser in numberUsers:
-        clientID = userList[iUser].clentID
-        groupID = userList[iUser].groupID
-        username = userList[iUser].username
-        userListResponse = ctypes.create_string_buffer(length)
-        struct.pack_into('>BBBHBB8s', userListResponse, 0,value,sourceID,0x01,length,clientID,groupID,username) 
+    length = len(userList) + 5
+
+    userListResponse = ctypes.create_string_buffer(21)
+    struct.pack_into('>BBBH16s', userListResponse, 0,value,sourceID,0x01,length,userList) 
+    return userListResponse
 
 def updateList(sequenceNum,userList):
     type = 14
@@ -250,7 +261,8 @@ def updateDisconnection(sequenceNum,clientID,userList):
     struct.pack_into('>BBBHB', updateDisconnection, 0,value,0x00,0xFF,0x0008,clientID)  
 
 
-def dataReceived(s,data,addr,clientID):
+def dataReceived(s,data,addr):
+    global clientID,groupID
     messageType = getType(data)
     print("messageType : "+ str(messageType) )
     sequenceNumReceived =  getSequenceNumber(data)
@@ -260,7 +272,7 @@ def dataReceived(s,data,addr,clientID):
 #    groupID = getGroupID(data)    
 #    print("groupID : "+ str(groupID))     
 #    
-    if (messageType == 0b0):
+    if (messageType == 0x00):
         
         print("it is connection from client")
         username = getUsername(data)
@@ -272,11 +284,11 @@ def dataReceived(s,data,addr,clientID):
         print("please distribuer client ID")
         clientID = clientID + 1
         print("clientID : "+ str(clientID))       
-        groupID = 0x01
+
         print("groupID : "+ str(groupID))         
         userList[username] =  [clientID,groupID,addr]
         print("userList2 : "+ str(userList))  
-        Accept = connectionAccept(sequenceNumReceived,clientID,groupID)
+        Accept = connectionAccept(sequenceNumReceived)
         s.sendto(Accept,addr)
         
         return messageType  
@@ -284,14 +296,22 @@ def dataReceived(s,data,addr,clientID):
     elif (messageType == 0x11):
         
         print("ACK from client")
-        pass
-       
+#        print("clientID : "+ str(clientID))
+#        print("groupID : "+ str(groupID))       
+     
+    elif (messageType == 0x03):
+        
+        print("userList Request")
+
+        print("clientID : "+ str(clientID))
+        userListResponse = sendUserListResponse(sequenceNumReceived,userList)
+        s.sendto(userListResponse,addr)
 
     else:
-        print("it is disconnection respond")
+        print("it is disconnection request")
         sourceID = getClientID(data)
         print("clientID : "+ str(sourceID))
-        respond = acknowledgement(type,sequenceNumReceived,sourceID)
+        respond = acknowledgement(messageType,sequenceNumReceived,sourceID)
         s.sendto(respond,addr)
         return messageType
 
@@ -299,16 +319,6 @@ def dataReceived(s,data,addr,clientID):
 
     
 
-PORT = 1249
-HOST = 'localhost'
-
-s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)	
-s.bind((HOST,PORT))
-
-inputs = [s]
-address = []
-userList = {}
-clientID = 0
 
 #userList[username] = [ip, port, clientID,groupID] 
 
@@ -324,14 +334,13 @@ while True :
         if s==r:
             data,addr = s.recvfrom(1024)
             print (data)
-
+            print ('connected by',addr)
             #print(str(data) + '\n')
             address.append(addr)
-            print("address: "+str(data) + '\n')
             if data !="end":
-                print ('connected by',addr)
 
-                dataReceived(s,data,addr,clientID)
+
+                dataReceived(s,data,addr)
                 #print(str(inputs) + '\n')
 
 #                for i in address:
