@@ -26,32 +26,45 @@ import argparse
 #
 #chaine2 = struct.unpack('>B3sBH', buf)
 #print (chaine2)
-#username = 'haha'
-#x = {}.fromkeys([username])
-#x[username ] = ['fuck','wocao']
-#clientID = x[username][0]
-#print(x)
-#print(len(x))
+usernameList = []
+username = 'haha'
+usernameList.append(username)
+x = {}.fromkeys([username])
+x[username ] = ['fuck','wocao']
+clientID = x[username][0]
+print(x)
+print(len(x))
+username = 'lol'
+x[username]=['dota','noob',('zzz','sdsd')]
+usernameList.append(username)
+print(x['lol'][2][0])
+
+print(x)
+print(usernameList)
+for i in usernameList :
+    print(x[i])    
+
+
 #x[username] = [ip,port,clientID,groupID]
 #x = 1
 #x = (x +1)%2
 #print(x)
 
 
-import os
-from multiprocessing import Queue,Process
-import time
-
-Qmsg = Queue()
-
-pid = os.fork()
-if(pid ==0 ):
-    msg = Qmsg.get()
-    print( msg)
-    msg = Qmsg.get()
-    print( msg)
-
-else:
-    Qmsg.put('hello')
-    Qmsg.put([1,2,3,4])
-    os.wait
+#import os
+#from multiprocessing import Queue,Process
+#import time
+#
+#Qmsg = Queue()
+#
+#pid = os.fork()
+#if(pid ==0 ):
+#    msg = Qmsg.get()
+#    print( msg)
+#    msg = Qmsg.get()
+#    print( msg)
+#
+#else:
+#    Qmsg.put('hello')
+#    Qmsg.put([1,2,3,4])
+#    os.wait

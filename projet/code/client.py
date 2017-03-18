@@ -17,21 +17,27 @@ s.connect((HOST,PORT))
 
 sequenceNumSend = 0
 sequenceNumReceived = 0
-sourceID = 0
-groupID = 0
+
+
 clientID =0
 Qmsg = Queue()
-
-
-
+ACK = 0
+messageType = 0
+usernameList = []
+userList = {}
 
 def valueControl(messageType,R,S,ACK):
-    value = messageType    
-#    print(bin(value))
+    print("R :" + str(R))
+    print("S :" + str(S))
+    print("ACK :" + str(ACK))
+    value = messageType<<1    
+    print("value1 :" +str(bin(value)))
     value = value + R <<1
 #    print(value)
+    print("value2 :" + str(bin(value)))
     value = value + S <<1 
-    value = value + ACK <<1 
+    print("value3 :" + str(bin(value)))
+    value = value + ACK  
     
     return int(value)  
     
@@ -62,8 +68,8 @@ def getUsername(data):
     
 def getSequenceNumber(data):
     premier = struct.unpack('>B', data[0])
-    print ("Premier element : " + str(premier[0]))
-    print ("Premier element en binaire : " + str(bin(premier[0])))    
+#    print ("Premier element : " + str(premier[0]))
+#    print ("Premier element en binaire : " + str(bin(premier[0])))    
     
     s = str(bin(premier[0]))
 
@@ -74,18 +80,18 @@ def getSequenceNumber(data):
     
     return int(sequenceNum)
     
-#def getACK(data):
-#    premier = struct.unpack('>b', data[0])
+def getACK(data):
+    premier = struct.unpack('>b', data[0])
 #    print ("Premier element : " + str(premier[0]))
 #    print ("Premier element en binaire : " + str(bin(premier[0])))    
-#    S = str(bin(premier[0]))
-#    print("S:"+S)
-#    n = len(S)
-#    print("n:"+str(n)) 
-#    A = S[n-1]
-#    print("ACK:"+A)
-#    
-#    return A
+    S = str(bin(premier[0]))
+    print("S:"+S)
+    n = len(S)
+    print("n:"+str(n)) 
+    A = S[n-1]
+    print("ACK:"+A)
+    
+    return int(A)
         
     
 def getClientID(Accept):
@@ -121,21 +127,44 @@ def getPayload(dataMessage):
     return payload
 
 def getUserList(userListResponse):
-    userList = struct.unpack_from('16s', userListResponse,5)
-    print(userList)
+    global userList,usernameList
+    clientID = struct.unpack_from('B', userListResponse,5)
+    clientID = clientID[0]    
+    print("clientID in dict : "+ str(clientID)) 
     
+    groupID = struct.unpack_from('B', userListResponse,6)
+    groupID = groupID[0] 
+    print("groupID in dict : "+ str(groupID))  
+    
+    username = struct.unpack_from('8s', userListResponse,7)
+    username = username[0].decode('UTF-8')
+    print("username in dict : "+ str(username))  
+    
+#    ipAddress = struct.unpack_from('L', userListResponse,9)
+#    ipAddress = ipAddress[0]
+#    print("ipAddress in dict : "+ str(ipAddress))
+#    
+#    port = struct.unpack_from('H', userListResponse,10)
+#    port = ipAddress[0]
+#    print("port in dict : "+ str(port)) 
+    
+    userList = {}.fromkeys([username])
+#    userList[username] =  [clientID,groupID,(ipAddress,port)]    
+    userList[username] =  [clientID,groupID]
+    usernameList.append(username)    
+    print("userList : "+ str(userList))  
+    print("usernameList : "+ str(usernameList))
     return userList        
     
 
-def acknowledgement(sequenceNumReceived):
-    global sourceID
-    messageType = 0x11
+def acknowledgement(messageType):
+    global clientID,ACK,sequenceNumReceived
     R = 0     
-    A = 1
-    value = valueControl(messageType,R,sequenceNumReceived,A)
-    groupID = 0x00
+
+    value = valueControl(messageType,R,sequenceNumReceived,ACK)
+
     acknowledgement = ctypes.create_string_buffer(5)
-    struct.pack_into('>BBBH', acknowledgement, 0,value,sourceID,groupID,0x0006)  
+    struct.pack_into('>BBBH', acknowledgement, 0,value,clientID,0x00,0x0006)  
     return acknowledgement
 
     
@@ -145,7 +174,9 @@ def connection(s,addr):
     print("username :" +str(username))
     if len(username) <=8:
         n = len(username)
+        print("n:"+str(n))
         username = username + (8-n)*'0'
+        print("username :" +str(username))
         connect = ctypes.create_string_buffer(14)
         #put data into the buffer
         struct.pack_into('BBBH8s', connect, 0,0x00,0x00,0x00,0x000E,str(username).encode('UTF-8'))
@@ -156,31 +187,34 @@ def connection(s,addr):
     return  connect
     
 def disconnectionRequest():
-    global sourceID,sequenceNumSend
+    global clientID,sequenceNumSend,messageType
+    print("disconnect sq: " +str(sequenceNumSend))
     messageType = 10
     R = 0     
     A = 0 
     value = valueControl(messageType,R,sequenceNumSend,A)
+    print(bin(value))
     groupID = 0
-    disconnectionRequest = ctypes.create_string_buffer(5)
-    struct.pack_into('>BBBH', disconnectionRequest, 0,value,sourceID,groupID,0x0005)  
+    disconnectionRequest = ctypes.create_string_buffer(6)
+    struct.pack_into('>BBBH', disconnectionRequest, 0,value,clientID,groupID,0x0005)  
     
     return disconnectionRequest
 
 
-def userListRequest(sequenceNumSend):
-    global sourceID
+def userListRequest():
+    global clientID,messageType,sequenceNumSend
     messageType = 3
     R = 0     
     A = 0
     value = valueControl(messageType,R,sequenceNumSend,A)
  
     userListRequest = ctypes.create_string_buffer(6)
-    struct.pack_into('bbbH', userListRequest, 0,value,sourceID,0x01,0x0006)
+    struct.pack_into('bbbH', userListRequest, 0,value,clientID,0x01,0x0006)
     return userListRequest    
     
 
 def sendDataMessage(sequenceNumSend,sourceID,groupID):
+    global messageType
     messageType = 5
     R = 0     
     A = 0
@@ -243,16 +277,16 @@ def groupDisjointRequest(sequenceNum,sourceID):
 
 
 def dataReceived(s,data,addr):
-    global sequenceNumSend
-    global sourceID
+    global sequenceNumSend,sequenceNumReceived
+
     global clientID
-    global groupID
+    global groupID,ACK,messageType
     messageType = getType(data)
     print("messageType : "+ str(messageType) )
     sequenceNumReceived =  getSequenceNumber(data)
     print("sequenceNumReceived : "+ str(sequenceNumReceived) )
-    groupID = getGroupID(data)    
-    print("groupID : "+ str(groupID)) 
+    print("sequenceNumSend before: " + str(sequenceNumSend))
+#    print("groupID : "+ str(groupID)) 
 #    ACK = getACK(data)    
 #    print("ACK : "+ str(ACK) ) 
  
@@ -260,15 +294,17 @@ def dataReceived(s,data,addr):
     if (messageType == 0x01):
         if(sequenceNumReceived == sequenceNumSend):
             sequenceNumSend = (sequenceNumSend + 1)%2
-            print("sequenceNumSend : " + str(sequenceNumSend))
+            ACK = (ACK + 1)%2
+            print("sequenceNumSend after : " + str(sequenceNumSend))
             print("it is connectionAccept")
 
-            sourceID = getClientID(data)
-            print("clientID : "+ str(sourceID))
-            ACK = acknowledgement(sequenceNumReceived)
-            s.sendto(ACK,addr)
-            sourceID = getClientID(data)
-            print("clientID : "+ str(sourceID))
+            groupID = getGroupID(data)
+            clientID = getClientID(data)  
+            print("clientID : "+ str(clientID))
+            
+
+#            sourceID = getClientID(data)
+            print("groupID : "+ str(groupID))
             return messageType          
             
     elif(messageType == 0x02):
@@ -282,32 +318,32 @@ def dataReceived(s,data,addr):
             else :
                 print("maximum number of users exceeded")
             return messageType
+    elif(messageType == 0x0A):
+        if(sequenceNumReceived == sequenceNumSend):
 
-                
-    elif(messageType == 0x04):
-        if(sequenceNumReceived == sequenceNumSend):
-            sequenceNumSend = (sequenceNumSend + 1)%2
-            
-            print("it is userList respond")
-            sourceID = getClientID(data)
-            print("clientID : "+ str(sourceID))
-            
-            acknowledgement(type,sequenceNumReceived,sourceID)
-            return messageType
-            
-    else :
-        if(sequenceNumReceived == sequenceNumSend):
-            sequenceNumSend = (sequenceNumSend + 1)%2
             
             print("it is disconnection ACK")
-            sourceID = getClientID(data)
-            print("clientID : "+ str(sourceID))
+#            clientID = getClientID(data)
+#            print("clientID : "+ str(clientID))
             
             print("session end")
             s.close()
             sys.exit()            
+
+                
+    elif(messageType == 0x04):
+        if(sequenceNumReceived == sequenceNumSend):
+
+            
+            print("it is userList respond")
+#            sourceID = getClientID(data)
+#            print("clientID : "+ str(clientID))
+            userList = getUserList(data)
             return messageType
             
+
+    else:
+        print("wait")
 #    elif():
 #       
 #        
@@ -324,6 +360,7 @@ def dataReceived(s,data,addr):
 print("connection")
 connect = connection(s,addr)
 
+
 childPid = os.fork()
 
 
@@ -331,31 +368,45 @@ if childPid ==0:
     while True:
         data,addr = s.recvfrom(1024)
         print(data)
-        messageType = dataReceived(s,data,addr)
-        Qmsg.put(sourceID) 
+        dataReceived(s,data,addr)
+        Qmsg.put(clientID) 
         Qmsg.put(groupID) 
-            
+        Qmsg.put(sequenceNumSend)    
 else:
     while True:
 
         
         if not Qmsg.empty():  
-            sourceID = Qmsg.get() 
-            print("clientID : "+ str(sourceID)) 
+            clientID = Qmsg.get() 
+            print("clientID : "+ str(clientID)) 
             groupID = Qmsg.get()
             print("groupID : "+ str(groupID)) 
+            messageType = Qmsg.get()
+            print("messageType : "+ str(messageType)) 
+            sequenceNumSend = Qmsg.get()
+            print("sequenceNumSend in main: "+ str(sequenceNumSend)) 
             
         print ("chose type to do")
         mType = raw_input()
 
-        if (mType == '3'):
+
+        if (mType == 'A'):
+            sequenceNumSend = (sequenceNumSend + 1)%2
+            print("sequenceNumSend in main: "+ str(sequenceNumSend))
             print("userListRequest")
-            userListRequest = userListRequest(sequenceNumSend)        
+            userListRequest = userListRequest()
+            s.sendto(userListRequest,addr)
+            
+        elif(mType == 'B'):
+            acknow = acknowledgement(messageType)
+            s.sendto(acknow,addr)
         else:
             print("disconnection")
 #                print(sourceID)
+            sequenceNumSend = (sequenceNumSend + 1)%2
+            print("sequenceNumSend in main: "+ str(sequenceNumSend)) 
             disconnectionRequest = disconnectionRequest()
-
+            s.sendto(disconnectionRequest,addr)
             
             
             
