@@ -116,6 +116,16 @@ def getSourceID(Accept):
     return sourceID
     
     
+def getPayload(dataMessage):    
+    bufFormat= '>BBBHH' + str(len(dataMessage) - 7) + 's'
+    getPayload = ctypes.create_string_buffer(len(dataMessage))
+    getPayload = struct.unpack_from(bufFormat, dataMessage, 0)
+
+    payload = getPayload[5]
+    print("payload : " + str(payload) )
+    
+    return payload    
+    
     
 def acknowledgement():
     global messageType, A,sequenceNumReceived
@@ -127,17 +137,37 @@ def acknowledgement():
     struct.pack_into('>BBBH', acknowledgement, 0,value,clientID,0x00,0x0005) 
     return acknowledgement
 
-def connectionAccept():
+def connectionAccept(data):
     global clientID,groupID,messageType,sequenceNumReceived
+    global userList,usernameList
     # response
     messageType = 1
     R = 0 
     A = 1
     
     value = valueControl(messageType ,R,sequenceNumReceived,A)
+    print("please distribuer client ID")
+    print("clientID before : "+ str(clientID))   
+    clientID = clientID + 1   
+    print("clientID after: "+ str(clientID))  
+    username = getUsername(data)
+    print("username : "+ str(username))
+    usernameList.append(username)
+    print("usernameList : "+ str(usernameList))
+    userList = {}.fromkeys([clientID])
+    
+#        print("userList1 : "+ str(userList)) 
 
-    print ("groupID : "+str(groupID))
-    print ("clientID : "+str(clientID))
+     
+    print("groupID : "+ str(groupID))
+     
+    userList[clientID] =  [username,groupID,addr]
+    print("userList : "+ str(userList)) 
+
+
+
+#    print ("groupID : "+str(groupID))
+#    print ("clientID : "+str(clientID))
 
     Accept = ctypes.create_string_buffer(6)
     struct.pack_into('>BBBHB', Accept, 0,value,0x00,groupID,0x0000,clientID)
@@ -185,19 +215,21 @@ def sendUserListResponse():
     length = len(userList) + 5
     print("usernameList : "+str(usernameList))    
     print("userList : "+str(userList))
-    for iUser in usernameList:
-        print("iUser:"+str(iUser))
-        username = str(iUser)
-        clientID = int(userList[iUser][0])
-        print("clientID in dict : "+ str(clientID)) 
-        groupID  = int(userList[iUser][1])
-        print("groupID in dict : "+ str(groupID))        
+    userListString = str(userList)
+    print("userListString : "+str(userListString))
+#    for iUser in usernameList:
+#        print("iUser:"+str(iUser))
+#        username = str(iUser)
+#        clientID = int(userList[iUser][0])
+#        print("clientID in dict : "+ str(clientID)) 
+#        groupID  = int(userList[iUser][1])
+#        print("groupID in dict : "+ str(groupID))        
 #        ipAddress = userList[iUser][2][0]
 #        port = int(userList[iUser][2][1])       
-        userListResponse = ctypes.create_string_buffer(15)
-        struct.pack_into('>BBBHBB8s', userListResponse, 0,value,clientID,0x01,length,clientID,groupID,username)
+#    userListResponse = ctypes.create_string_buffer(21)
+    userListResponse = struct.pack('>BBBH'+str(len(userListString))+'s', value,clientID,0x01,length,userListString)
         
-        return userListResponse
+    return userListResponse
 
 def updateList(sequenceNum,userList):
     type = 14
@@ -286,10 +318,10 @@ def dataReceived(s,data,addr):
     global clientID,groupID,messageType
     global sequenceNumReceived
     global userList,usernameList    
-    
-    
+
+
     messageType = getType(data)
-    print("messageType : "+ str(messageType) )
+    print("messageType : "+ str(messageType))
     sequenceNumReceived =  getSequenceNumber(data)
     print("sequenceNumReceived : "+ str(sequenceNumReceived) )
 #    ACK = getACK(data)    
@@ -300,22 +332,8 @@ def dataReceived(s,data,addr):
     if (messageType == 0x00):
         
         print("it is connection from client")
-        username = getUsername(data)
-        print("username : "+ str(username))
-        usernameList.append(username)
-        print("usernameList : "+ str(usernameList))
-        userList = {}.fromkeys([username])
-        
-#        print("userList1 : "+ str(userList)) 
-        print("please distribuer client ID")
-        print("clientID : "+ str(clientID))   
-        clientID = clientID + 1
-        print("clientID : "+ str(clientID))       
-        print("groupID : "+ str(groupID))
-         
-        userList[username] =  [clientID,groupID,addr]
-        print("userList : "+ str(userList))  
-        Accept = connectionAccept()
+ 
+        Accept = connectionAccept(data)
         s.sendto(Accept,addr)
         
         return messageType  
@@ -337,6 +355,16 @@ def dataReceived(s,data,addr):
         print("userlist sended : " + str(userList))
         userListResponse = sendUserListResponse()
         s.sendto(userListResponse,addr)
+        
+        
+#    elif (messageType == 0x05):
+#        
+#        print("transfer a message from client")
+#
+#        print("clientID : "+ str(clientID))
+#        print("userlist sended : " + str(userList))
+#        userListResponse = sendUserListResponse()
+#        s.sendto(userListResponse,addr)    
 
     else:
         
@@ -362,20 +390,29 @@ while True :
     for r in readable:	
         if s==r:
             data,addr = s.recvfrom(1024)
-            print (data)
-            print ('connected by',addr)
+
+#            print (data)
+
             #print(str(data) + '\n')
             address.append(addr)
             if data !="end":
-                dataReceived(s,data,addr)
+                print ('connected by',addr)
+                messageType = getType(data)
+                if (messageType == 0x05):
+                    print("transfer a message from client")
+                    for i in address:
+                        if i is not addr:
+
+                            s.sendto(data,i)
+                                              
+                else : 
+                    dataReceived(s,data,addr)
 
                 #print(str(inputs) + '\n')
 
-#                for i in address:
-#                    if i is not addr:              
-#                        s.sendto(data,i)
-#                        address.remove(addr)
-        else:
-            if len(address)==0:
-                s.close()
-                sys.exit()
+
+            else:
+                address.remove(addr)
+                if len(address)==0:
+                    s.close()
+                    sys.exit()

@@ -20,6 +20,7 @@ sequenceNumReceived = 0
 
 
 clientID =0
+groupID = 0
 Qmsg = Queue()
 ACK = 0
 messageType = 0
@@ -27,16 +28,16 @@ usernameList = []
 userList = {}
 
 def valueControl(messageType,R,S,ACK):
-    print("R :" + str(R))
-    print("S :" + str(S))
-    print("ACK :" + str(ACK))
+#    print("R :" + str(R))
+#    print("S :" + str(S))
+#    print("ACK :" + str(ACK))
     value = messageType<<1    
-    print("value1 :" +str(bin(value)))
+#    print("value1 :" +str(bin(value)))
     value = value + R <<1
 #    print(value)
-    print("value2 :" + str(bin(value)))
+#    print("value2 :" + str(bin(value)))
     value = value + S <<1 
-    print("value3 :" + str(bin(value)))
+#    print("value3 :" + str(bin(value)))
     value = value + ACK  
     
     return int(value)  
@@ -128,17 +129,22 @@ def getPayload(dataMessage):
 
 def getUserList(userListResponse):
     global userList,usernameList
-    clientID = struct.unpack_from('B', userListResponse,5)
-    clientID = clientID[0]    
-    print("clientID in dict : "+ str(clientID)) 
     
-    groupID = struct.unpack_from('B', userListResponse,6)
-    groupID = groupID[0] 
-    print("groupID in dict : "+ str(groupID))  
-    
-    username = struct.unpack_from('8s', userListResponse,7)
-    username = username[0].decode('UTF-8')
-    print("username in dict : "+ str(username))  
+    userFormat = '>BBBH'+str(len(userListResponse)-5)+'s'
+    user = ctypes.create_string_buffer(len(userListResponse))
+    user = struct.unpack_from(userFormat, userListResponse,0)
+    print("user : "+ str(user[4]))
+#    clientID = struct.unpack_from('B', userListResponse,5)
+#    clientID = clientID[0]    
+#    print("clientID in dict : "+ str(clientID)) 
+#    
+#    groupID = struct.unpack_from('B', userListResponse,6)
+#    groupID = groupID[0] 
+#    print("groupID in dict : "+ str(groupID))  
+#    
+#    username = struct.unpack_from('8s', userListResponse,7)
+#    username = username[0].decode('UTF-8')
+#    print("username in dict : "+ str(username))  
     
 #    ipAddress = struct.unpack_from('L', userListResponse,9)
 #    ipAddress = ipAddress[0]
@@ -148,12 +154,12 @@ def getUserList(userListResponse):
 #    port = ipAddress[0]
 #    print("port in dict : "+ str(port)) 
     
-    userList = {}.fromkeys([username])
-#    userList[username] =  [clientID,groupID,(ipAddress,port)]    
-    userList[username] =  [clientID,groupID]
-    usernameList.append(username)    
-    print("userList : "+ str(userList))  
-    print("usernameList : "+ str(usernameList))
+#    userList = {}.fromkeys([username])
+##    userList[username] =  [clientID,groupID,(ipAddress,port)]    
+#    userList[username] =  [clientID,groupID]
+#    usernameList.append(username)    
+#    print("userList : "+ str(userList))  
+#    print("usernameList : "+ str(usernameList))
     return userList        
     
 
@@ -213,20 +219,19 @@ def userListRequest():
     return userListRequest    
     
 
-def sendDataMessage(sequenceNumSend,sourceID,groupID):
-    global messageType
+def sendDataMessage(payload):
+    global messageType,sequenceNumSend,clientID,groupID
     messageType = 5
     R = 0     
     A = 0
     value = valueControl(messageType,R,sequenceNumSend,A)    
-    print("please input payload")
-    
-    payload = input()
-    print("payload : " + str(payload))
-    payloadLength = len(payload)
-    print("payloadLength : " + str(payloadLength))
-    dataMessage = struct.pack('>BBBHH' + str(len(payload)) + 's', value, sourceID, groupID,0x0008,len(payload),payload)
+
+#    payloadLength = len(payload)
+#    print("payloadLength : " + str(payloadLength))
+    dataMessage = struct.pack('>BBBHH' + str(len(payload)) + 's', value, clientID, groupID,0x0008,len(payload),payload)
     print(dataMessage)
+    
+    return dataMessage
  
  
 def groupCreationRequest(sequenceNumSend,sourceID,T,clientID):
@@ -400,6 +405,16 @@ else:
         elif(mType == 'B'):
             acknow = acknowledgement(messageType)
             s.sendto(acknow,addr)
+        elif(mType == 'E'):
+            print("send a message in public")
+            print("please input payload")
+    
+            payload = raw_input()
+            print("payload : " + str(payload))
+            dataMessage = sendDataMessage(payload)
+
+            s.sendto(dataMessage,addr)    
+            
         else:
             print("disconnection")
 #                print(sourceID)
