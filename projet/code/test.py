@@ -40,9 +40,16 @@ usernameList.append(username)
 print(x['lol'][2][0])
 
 print(x)
-print(usernameList)
-for i in usernameList :
-    print(x[i])    
+
+y = str(x)
+print("y : " +y)
+z = eval(y)
+print("z : "+str(z))
+print(z['haha'])
+
+#print(usernameList)
+#for i in usernameList :
+#    print(x[i])    
 
 
 #x[username] = [ip,port,clientID,groupID]
