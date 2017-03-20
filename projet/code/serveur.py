@@ -112,17 +112,17 @@ def getSourceID(data):
 
 def getTypeServer(groupCreationRequest):
     typeServer = struct.unpack_from('B', groupCreationRequest,5)
-    print(typeServer)
+#    print(typeServer)
     typeServer = typeServer[0] >>7
-    print(typeServer)
+#    print(typeServer)
     return int(typeServer) 
 
-def getSourceID(Accept):
-    sourceID = struct.unpack_from('b', Accept,3)
-    sourceID = sourceID[0]
-    print(sourceID) 
-
-    return sourceID
+#def getSourceID(Accept):
+#    sourceID = struct.unpack_from('b', Accept,3)
+#    sourceID = sourceID[0]
+#    print(sourceID) 
+#
+#    return sourceID
     
     
 def getPayload(dataMessage):    
@@ -277,8 +277,7 @@ def groupCreationAccept():
         
     typeServer = typeServer <<7
     
-    print("distribuer group ID")
-
+    print("distribuer a groupID private : "+str(groupID_private))
 #    groupID = groupID + 1
 #    print("groupID in group Creation Accept : "+str(groupID))
 #    groupPrivateList.append(groupID)
@@ -326,8 +325,9 @@ def serverTransferGroupInvitation(s,clientInvited,typeServer):
         ipAddress = userList[id][2]
         print("ipAddress in serverTransferGroupInvitation : " + str(ipAddress))
         groupInvitationRequest = ctypes.create_string_buffer(9)
-        struct.pack_into('BBBHBBB', groupInvitationRequest, 0,value,clientID,0x00,0x0008,typeServer,id,groupID_private)
+        struct.pack_into('>BBBHBBB', groupInvitationRequest, 0,value,clientID,0x00,0x0008,typeServer,id,groupID_private)
         s.sendto(groupInvitationRequest,ipAddress)
+        print("server transfered invitation success")
 
 
 def groupDissolution(sequenceNum,groupID):
@@ -351,7 +351,7 @@ def updateDisconnection(sequenceNum,clientID,userList):
 
 
 def dataReceived(s,data,addr):
-    global clientID,groupID,messageType,groupID_privated,sourceID
+    global clientID,groupID,messageType,groupID_private,sourceID
     global sequenceNumReceived,typeServer
     global userList,usernameList    
 
@@ -376,7 +376,7 @@ def dataReceived(s,data,addr):
 
     elif(messageType == 0x01 and ACK==1):
         print("ACK in 0x01 :"  +str(ACK))
-        print("it is connection ACK from client")
+        print("it is connection ACK from client %s "%clientID)
 #        sourceID = getSourceID(data)
 #        print("sourceID : "+ str(sourceID))
 
@@ -390,7 +390,7 @@ def dataReceived(s,data,addr):
             respond = acknowledgement()
             s.sendto(respond,addr)
         else :
-            print("disconnection ACK from client")
+            print("disconnection ACK from client %s"%clientID)
         
       
      
@@ -423,9 +423,9 @@ def dataReceived(s,data,addr):
 #        print(clientInvited[0])
         print("distribuer group ID private")
 
-        groupID_privated = groupID + 1
-        print("groupID_privated in group Creation Accept : "+str(groupID_privated))
-        groupPrivateList.append(groupID_privated)
+        groupID_private = groupID + 1
+        print("groupID_private in group Creation Accept : "+str(groupID_private))
+        groupPrivateList.append(groupID_private)
         print("groupPrivateList in group Creation Accept : "+str(groupPrivateList))        
         
         
@@ -443,7 +443,33 @@ def dataReceived(s,data,addr):
         sourceID = getSourceID(data)
         print("client %s has accepted invitation" %sourceID)   
         groupCA = groupCreationAccept()
-        s.sendto(groupCA, addr)
+        print("userList in 0x0A : " +str(userList))
+        respond = acknowledgement()          
+        
+        addressSend = []
+        for i in userList:
+            address = userList[i][2]
+            clientID = userList[i]
+            addressSend.append(address)
+            if i == 1:
+                print("address of client in 0x0A :"+str(address))
+                print("client %s in 0x0A :"%s)
+                s.sendto(groupCA, address)
+            else :
+                print("address of client in 0x0A :"+str(address))
+                print("client %s in 0x0A :"%s)
+                s.sendto(respond, addr)                
+                
+#        print("addr1 of client1 in 0x0A :"+str(addr1))
+#        addr2 = userList[2][2]
+#        print("addr2 of client2 in 0x0A :"+str(addr2))
+        
+     
+       
+        
+
+        
+
         
     else:
         
