@@ -4,11 +4,13 @@ import select
 import ctypes
 import struct
 import argparse
-
+from socerr import socerr
+from twisted.internet import reactor
+ 
 PORT = 1250
 HOST = 'localhost'
-
-s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)	
+s = socerr(socket.AF_INET, socket.SOCK_DGRAM, 80)
+#s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)	
 s.bind((HOST,PORT))
 
 inputs = [s]
@@ -51,9 +53,12 @@ def getType(data):
 
 
 def getUsername(data):
-    username = struct.unpack_from('8s', data,6)
-    print ("Voici username : " + username[0].decode('UTF-8'))
-    username = username[0].decode('UTF-8')        
+    bufFormat= '>BBBH' + str(len(data) - 5) + 's'
+    getUsername = ctypes.create_string_buffer(len(data))
+    getUsername = struct.unpack_from(bufFormat, data, 0)
+    username = getUsername[4]
+    print ("Voici username : " + username)
+         
 #    print(username)    
     return username
     
@@ -168,7 +173,7 @@ def connectionAccept(data):
     
     value = valueControl(messageType ,R,sequenceNumReceived,A)
     print("please distribuer client ID")
-    print("clientID before : "+ str(clientID))   
+#    print("clientID before : "+ str(clientID))   
     clientID = clientID + 1   
     print("clientID after: "+ str(clientID))  
     username = getUsername(data)
@@ -205,21 +210,15 @@ def connectionAccept(data):
 #    print( len(Accept))
 
 
-def connectionReject(sequenceNum,Error,A):
+def connectionReject(data,Error):
+    global messageType,sequenceReceived
     # response
     messageType = 2
     R = 0 
-    if (A  == 1):
-        A = 0
-    else: 
-        A = 1
-        
-    value = valueControl(messageType,R,sequenceNum,A)
-    if Error == 1:
-        print("uername already taken")
-    else :
-        print("maximum number of users exceeded")
-        
+    A = 1
+    
+    value = valueControl(messageType,R,sequenceNumReceived,A)
+
     Error = Error<<7
     Reject = ctypes.create_string_buffer(6)
     struct.pack_into('>BBBHB', Reject, 0,value,0x00,0x00,0x0007,Error) 
@@ -366,17 +365,40 @@ def dataReceived(s,data,addr):
 #    print("groupID : "+ str(groupID))     
 #    
     if (messageType == 0x00):
+#   server receive client's connection, and the choose if the length is more than
+#   the range of server, length of username, if existed
         
         print("it is connection from client")
- 
-        Accept = connectionAccept(data)
-        s.sendto(Accept,addr)
-        
-        return messageType  
+        username = getUsername(data)
+        print("username in 0x00: "+ str(username))
+        print("usernameList in 0x00: "+ str(usernameList))
+        print("userList length: "+ str(len(userList)))
+        if len(userList) < 256:
+            n = len(username)
+            print("username length: "+ str(n))
+            if n>8: 
+                Error = 1
+                print("maximum number of users exceeded")
+                Reject = connectionReject(data,Error)
+                s.sendto(Reject,addr)
+            else :     
+
+                    if username not in usernameList:
+                        print("connection accept in server")
+                        Accept = connectionAccept(data)
+                        s.sendto(Accept,addr)
+
+                    else :
+                        Error = 0
+                        print("uername already taken")  
+                        Reject = connectionReject(data,Error)
+                        s.sendto(Reject,addr)
+        else :
+            print("server is full")
 
     elif(messageType == 0x01 and ACK==1):
         print("ACK in 0x01 :"  +str(ACK))
-        print("it is connection ACK from client %s "%clientID)
+        print("it is connection ACK from client ")
 #        sourceID = getSourceID(data)
 #        print("sourceID : "+ str(sourceID))
 
@@ -406,9 +428,9 @@ def dataReceived(s,data,addr):
         
     elif(messageType == 0x04 and ACK==1):
         print("ACK in 0x04 :"  +str(ACK))
-        print("client %s has received userList respond" %clientID)        
+        print("client  has received userList respond" )        
         
-#    elif (messageType == 0x05):
+#    elif (messageType == 0x05)                   clienID:
 #        
 #        print("transfer a message from client")
 #
@@ -449,15 +471,15 @@ def dataReceived(s,data,addr):
         addressSend = []
         for i in userList:
             address = userList[i][2]
-            clientID = userList[i]
+            client_user = userList[i]
             addressSend.append(address)
             if i == 1:
                 print("address of client in 0x0A :"+str(address))
-                print("client %s in 0x0A :"%s)
+                print("client_user in 0x0A :"+str(client_user))
                 s.sendto(groupCA, address)
             else :
                 print("address of client in 0x0A :"+str(address))
-                print("client %s in 0x0A :"%s)
+                print("client_user in 0x0A :"+str(client_user))
                 s.sendto(respond, addr)                
                 
 #        print("addr1 of client1 in 0x0A :"+str(addr1))
@@ -485,13 +507,14 @@ def dataReceived(s,data,addr):
 #userList[username] = [ip, port, clientID,groupID] 
 
 
-readable,writable,exceptional = select.select(inputs,[],[], 10)    
+
 
 #print(str(readable) + '\n')
 
 #print(str(inputs) + '\n')
 
 while True : 
+    readable,writable,exceptional = select.select(inputs,[],[],0.2)    
     for r in readable:	
         if s==r:
             data,addr = s.recvfrom(1024)
