@@ -9,7 +9,7 @@ from twisted.internet import reactor
  
 PORT = 1250
 HOST = 'localhost'
-s = socerr(socket.AF_INET, socket.SOCK_DGRAM, 80)
+s = socerr(socket.AF_INET, socket.SOCK_DGRAM, 0)
 #s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)	
 s.bind((HOST,PORT))
 
@@ -48,7 +48,7 @@ def getType(data):
 #    print ("Premier element : " + str(premier[0]))
 #    print ("Premier element en binaire : " + str(bin(premier[0])))
     messageType = premier[0]>>3
-    print("messageType:"+str(messageType))
+#    print("messageType:"+str(messageType))
     return messageType
 
 
@@ -57,7 +57,7 @@ def getUsername(data):
     getUsername = ctypes.create_string_buffer(len(data))
     getUsername = struct.unpack_from(bufFormat, data, 0)
     username = getUsername[4]
-    print ("Voici username : " + username)
+#    print ("Voici username : " + username)
          
 #    print(username)    
     return username
@@ -76,7 +76,7 @@ def getSequenceNumber(data):
         print("n:"+str(n))  
         sequenceNum = s[n-1]
         
-    print("senquenceNum:"+str(sequenceNum))
+#    print("senquenceNum:"+str(sequenceNum))
     
     return int(sequenceNum)
 
@@ -86,11 +86,11 @@ def getACK(data):
 #    print ("Premier element : " + str(premier[0]))
 #    print ("Premier element en binaire : " + str(bin(premier[0])))    
     S = str(bin(premier[0]))
-    print("S:"+str(S))
+#    print("S:"+str(S))
     n = len(S)
-    print("n:"+str(n)) 
+#    print("n:"+str(n)) 
     A = S[n-1]
-    print("ACK:"+A)
+#    print("ACK:"+A)
     
     return int(A)
         
@@ -308,6 +308,7 @@ def serverTransferGroupInvitation(s,clientInvited,typeServer):
         client_invited_list.append(int(i))
         
     print(client_invited_list)
+    print("sequenceNumReceived in serverTransferGroupInvitation : "+str(sequenceNumReceived))
     print("userList in serverTransferGroupInvitation : "+str(userList))
     
     messageType = 0x11
@@ -370,9 +371,9 @@ def dataReceived(s,data,addr):
         
         print("it is connection from client")
         username = getUsername(data)
-        print("username in 0x00: "+ str(username))
-        print("usernameList in 0x00: "+ str(usernameList))
-        print("userList length: "+ str(len(userList)))
+#        print("username in 0x00: "+ str(username))
+#        print("usernameList in 0x00: "+ str(usernameList))
+#        print("userList length: "+ str(len(userList)))
         if len(userList) < 256:
             n = len(username)
             print("username length: "+ str(n))
@@ -383,16 +384,16 @@ def dataReceived(s,data,addr):
                 s.sendto(Reject,addr)
             else :     
 
-                    if username not in usernameList:
-                        print("connection accept in server")
-                        Accept = connectionAccept(data)
-                        s.sendto(Accept,addr)
-
-                    else :
-                        Error = 0
-                        print("uername already taken")  
-                        Reject = connectionReject(data,Error)
-                        s.sendto(Reject,addr)
+                if username not in usernameList:
+                    print("connection accept in server")
+                    Accept = connectionAccept(data)
+                    s.sendto(Accept,addr)
+    
+                else :
+                    Error = 0
+                    print("uername already taken")  
+                    Reject = connectionReject(data,Error)
+                    s.sendto(Reject,addr)
         else :
             print("server is full")
 
@@ -493,9 +494,7 @@ def dataReceived(s,data,addr):
         
 
         
-    else:
-        
-        print("wait")
+
 #        print("clientID : "+ str(clientID))
 #        print("groupID : "+ str(groupID)) 
 
