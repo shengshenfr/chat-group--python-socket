@@ -13,7 +13,7 @@ PORT = 1250
 HOST = 'localhost'
 addr = (HOST,PORT)
 #s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-s = socerr(socket.AF_INET, socket.SOCK_DGRAM,0 )
+s = socerr(socket.AF_INET, socket.SOCK_DGRAM,0)
 s.connect((HOST,PORT))
 
 
@@ -105,7 +105,13 @@ def getGroupID_private(data):
     groupID_private = struct.unpack_from('>B', data,8)
     print("groupID private: " + str(groupID_private[0]))
     
-    return groupID_private[0]     
+    return groupID_private[0]  
+    
+def getID_private(data):
+    groupID_private = struct.unpack_from('>B', data,6)
+    print("groupID private: " + str(groupID_private))
+    
+    return groupID_private[0]      
 
 def getSourceID(data):
     sourceID = struct.unpack_from('>B', data,7)
@@ -216,24 +222,24 @@ def disconnectionRequest():
 
 
 def userListRequest():
-    global clientID,messageType,sequenceNumSend
+    global clientID,messageType,sequenceNumSend,addr_sequenceNum_ACK
     messageType = 3
     R = 0     
     A = 0
     value = valueControl(messageType,R,sequenceNumSend,A)
- 
+
     userListRequest = ctypes.create_string_buffer(6)
     struct.pack_into('>BBBH', userListRequest, 0,value,clientID,0x01,0x0006)
     return userListRequest    
     
 
 def sendDataMessage(payload):
-    global messageType,sequenceNumSend,clientID,groupID
+    global messageType,sequenceNumSend,clientID,groupID,addr_sequenceNum_ACK
     messageType = 5
     R = 0     
     A = 0
     value = valueControl(messageType,R,sequenceNumSend,A)    
-
+    addr_type_sequenceNum_ACK [addr_from] = [messageType,sequenceNumSend,ACK]
 #    payloadLength = len(pay#sequenceNumReceived =  getSequenceNumber(data)load)
 #    print("payloadLength : " + str(payloadLength))
     dataMessage = struct.pack('>BBBHH' + str(len(payload)) + 's', value, clientID, groupID,0x0008,len(payload),payload)
@@ -298,7 +304,7 @@ def clientGroupInvitationRequest():
     
   
 def groupInvitationAccept():
-    global sequenceNumSend,clientID,groupID_private,typeServer,sourceID
+    global sequenceNumSend,userID,groupID_private,typeServer,sourceID
     messageType = 10
     R = 0     
     A = 1
@@ -309,10 +315,10 @@ def groupInvitationAccept():
         print("group decentralized")
         
     typeServer = typeServer <<7
-    print("clientID in group invitation accept : "+str(clientID))    
+    print("userID in group invitation accept : "+str(userID))    
     print("sourceID in group invitation accept : "+str(sourceID))
     groupInvitationAccept = ctypes.create_string_buffer(9)
-    struct.pack_into('>BBBHBBB', groupInvitationAccept, 0,value,sourceID,0x00,0x0008,typeServer,groupID_private,clientID) 
+    struct.pack_into('>BBBHBBB', groupInvitationAccept, 0,value,sourceID,0x00,0x0008,typeServer,groupID_private,userID) 
     
     return groupInvitationAccept
 
@@ -339,7 +345,7 @@ def groupDisjointRequest(sequenceNum,sourceID):
 def retransmission(s,addr,buf):
     global messageType, sequenceNumReceived,ACK,resendTimeMax,sequenceNumSend
     resendtime = 0
-   
+    sequenceNumSend = (sequenceNumSend + 1)%2
     while True:
         resendtime += 1
         readable,writable,exceptional = select.select(inputs,[],[],0.5)
@@ -355,12 +361,12 @@ def retransmission(s,addr,buf):
             #jiebao,success,break
             if (sequenceNumSend == sequenceNumReceived and ACK == 1):
                 
-                print("i have received this packet")
+                print("no need to retransmission")
                 return
 
         s.sendto(buf,addr)
         print("this is %s resendtime" %resendtime)
-        if resendtime>resendTimeMax:
+        if resendtime>resendTimeMax-1:
             print("the last packet lost")
             return               
 
@@ -428,7 +434,7 @@ userID = 0
 timeout = 3
 resendTimeMax = 5
 resendMessage = {}
-addr_sequenceNum_ACK = {}
+addr_type_sequenceNum_ACK = {}
 messageTypeList = ['A','B','C','D','E','F','O']
 inputs = [s, sys.stdin]
 
@@ -437,7 +443,7 @@ while True :
     print("connection") 
     username = connection(s,addr)
 #    print("your username is : " +str(username))
-    addr_sequenceNum_ACK[addr] = [sequenceNumSend,ACK]
+
     resendtime = 0
     temps_break = 1
     
@@ -460,13 +466,13 @@ while True :
                 
                 print("it is connectionAccept")
     
-#                groupID = getGroupID(data)
-#                userID = getClientID(data)  
-#                print("userID in 0x01: "+ str(userID))
-#                #            sourceID = getClientID(data)
-#                print("groupID in 0x01: "+ str(groupID))
-#                acknow = acknowledgement()
-#                s.sendto(acknow,addr)
+                groupID = getGroupID(data)
+                userID = getClientID(data)  
+                print("userID in 0x01: "+ str(userID))
+                #            sourceID = getClientID(data)
+                print("groupID in 0x01: "+ str(groupID))
+                acknow = acknowledgement()
+                s.sendto(acknow,addr)
                 temps_break = 4
                 break
             elif (messageType == 0x02 and ACK == 1):
@@ -524,24 +530,25 @@ while True :
             
 
             # determiner if i have received a new or old packet
-            break_loop = False
-            if addr_from not in addr_sequenceNum_ACK:
-                print("sequenceNum_ACK is never stocked")
-                addr_sequenceNum_ACK[addr_from] = [sequenceNumReceived,ACK]
             
+            flag = False
+            if addr_from not in addr_type_sequenceNum_ACK:
+                print ("stock this packet")
+                addr_type_sequenceNum_ACK [addr_from] = [messageType,sequenceNumReceived,ACK]
             else :
-                if  (addr_sequenceNum_ACK[addr_from][0] == sequenceNumReceived) and (addr_sequenceNum_ACK[addr_from][1] == ACK):
-                    print("i have received this packe, i will stop to receive this paquet")
-                    break_loop = True
-
+                if (addr_type_sequenceNum_ACK [addr_from][0] == messageType) and (addr_type_sequenceNum_ACK [addr_from][1] == sequenceNumReceived):
+                    print("i have received this packet")
+                    flag = True
+    
                 else :
                     print ("i have never received this packet")
-                    addr_sequenceNum_ACK[addr_from] = [sequenceNumReceived , ACK]
-                               
-            if break_loop == False:
+                    addr_type_sequenceNum_ACK [addr_from] = [messageType,sequenceNumReceived,ACK]
+                           
            
+            if flag == False:           
                 if(messageType == 0x04 and ACK ==1):
                     if(sequenceNumReceived == sequenceNumSend):
+                        print("!!!!!!!!!!!!!!!!!!!")
                         print("it is userList respond")
             #            sourceID = getClientID(data,userList)
             #            print("clientID : "+ str(clientID))
@@ -556,6 +563,7 @@ while True :
     
                 elif(messageType == 0x05 and ACK ==1):
                     if(sequenceNumReceived == sequenceNumSend):
+                        print("!!!!!!!!!!!!!!!!!!!")
                         print("ACK of server transfer the message  ")
                         print("ACK in 0x0A :"  +str(ACK))          
                          
@@ -568,15 +576,23 @@ while True :
                 elif(messageType == 0x07 and ACK ==1 ):
                     if(sequenceNumReceived == sequenceNumSend):
             
-                        
+                        print("!!!!!!!!!!!!!!!!!!!")
+                         
                         print("server creation accepted")
-                        print("clientID in 0x07 : "+str(clientID))            
+                        
+                        print("userID in 0x07 : "+str(userID))
+#                        print("sourceID in 0x07 : "+str(sourceID))
+                        groupID_private = getID_private(data)
                         print("groupID_private in 0x07 : "+str(groupID_private))
                         print("userList in 0x07 before: "+ str(userList))
             #            sourceID = getClientID(data)
             #            print("clientID : "+ str(clientID))
-                        userList[clientID][1] = groupID_private
-                        groupID = groupID_private          
+                                                
+                        
+                        userList[userID][1] = groupID_private
+                        userList[sourceID][1] = groupID_private
+#                        userList[sourceID][1] = groupID_private
+                        groupID = groupID_private 
                         print("userList in 0x07 after: "+ str(userList))             
                         acknow = acknowledgement()
                         s.sendto(acknow,addr)
@@ -584,29 +600,29 @@ while True :
                         
      
             
-                elif(messageType == 0x0A and ACK ==1 ):
-                    if(sequenceNumReceived == sequenceNumSend):
-            
-                        
-                        print("server transfered invitation accepted")
-                        print("clientID in 0x0A : "+str(clientID))         
-                        print("groupID_private in 0x07 : "+str(groupID_private))
-                        print("userList in 0x0A before: "+ str(userList))
-            #            sourceID = getClientID(data)
-            #            print("clientID : "+ str(clientID))
-                        userList[clientID][1] = groupID_private
-                        groupID = groupID_private          
-                        print("userList in 0x0A after: "+ str(userList))
-                        acknow = acknowledgement()
-                        s.sendto(acknow,addr)             
-                        print("join a group success")
+#                elif(messageType == 0x0A and ACK ==1 ):
+#                    if(sequenceNumReceived == sequenceNumSend):
+#            
+#                        print("!!!!!!!!!!!!!!!!!!!")
+#                        print("server transfered invitation accepted")
+#                        print("userID in 0x0A : "+str(userID))         
+#                        print("groupID_private in 0x07 : "+str(groupID_private))
+#                        print("userList in 0x0A before: "+ str(userList))
+#            #            sourceID = getClientID(data)
+#            #            print("clientID : "+ str(clientID))
+#                        userList[userID][1] = groupID_private
+#                        groupID = groupID_private          
+#                        print("userList in 0x0A after: "+ str(userList))
+#                        acknow = acknowledgement()
+#                        s.sendto(acknow,addr)             
+#                        print("join a group success")
               
                             
                           
                 elif(messageType == 0x10 and ACK ==1):
                     if(sequenceNumReceived == sequenceNumSend):
             
-                        
+                        print("!!!!!!!!!!!!!!!!!!!")
                         print("it is disconnection ACK")
     
     #    clientID = struct.unpack_from('B', Accept,5)
@@ -622,7 +638,7 @@ while True :
                         
                         
                 elif(messageType == 0x11):
-                        
+                        print("!!!!!!!!!!!!!!!!!!!")
                         print(" serverTransferGroupInvitation from client %s" %userID)
                         print("ACK in 0x11 :"  +str(ACK))          
                         sourceID = getSourceID(data)
@@ -635,8 +651,8 @@ while True :
             #            clientID = getClientID(data)%s
             #            print("clientID : "+ str(clientID))
                         
-
-    #            print("userList"+str(userList)
+    
+        #            print("userList"+str(userList)
         else :
             print ("chose type to do")
             mType = sys.stdin.readline().strip()
@@ -644,16 +660,19 @@ while True :
 
             if (mType == 'A'):
 
-  
+                sequenceNumSend = (sequenceNumSend + 1)%2   
                 print("sequenceNumSend in main: "+ str(sequenceNumSend))
                 print("userListRequest")
                 userListRequest = userListRequest()
                 s.sendto(userListRequest,addr)
-                sequenceNumSend = (sequenceNumSend + 1)%2                   
+
                 
+
+                # retransmission                
+#                retransmission(s,addr,userListRequest)
                 
             elif(mType == 'C'):
-
+                sequenceNumSend = (sequenceNumSend + 1)%2
                 print("group creation request")
     #            print("userList in group Creation Request : "+str(userList))
                 print("who do you want to invite, pls input clientID, and end with 0")
@@ -668,20 +687,20 @@ while True :
                 
                 groupCreationRequest = groupCreationRequest(ID_invited_list)
                 s.sendto(groupCreationRequest,addr)
-                sequenceNumSend = (sequenceNumSend + 1)%2
+                
                 
             elif(mType == 'D'):
-
+                sequenceNumSend = (sequenceNumSend + 1)%2
                 print("disconnection")
     #                print(sourceID)
 
                 print("sequenceNumSend in main: "+ str(sequenceNumSend)) 
                 disconnectionRequest = disconnectionRequest()
                 s.sendto(disconnectionRequest,addr)
-                sequenceNumSend = (sequenceNumSend + 1)%2                    
+                                    
                 
             elif(mType == 'E'):
-      
+                sequenceNumSend = (sequenceNumSend + 1)%2  
                 print("send a message in public")
                 print("please input payload")
  
@@ -690,7 +709,7 @@ while True :
                 dataMessage = sendDataMessage(payload)
     
                 s.sendto(dataMessage,addr)
-                sequenceNumSend = (sequenceNumSend + 1)%2  
+                
             else:
                 print("wait")       
                 
