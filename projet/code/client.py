@@ -183,10 +183,10 @@ def getUserList(userListResponse):
 
 def acknowledgement():
     
-    global ACK,sequenceNumReceived,userID
+    global sequenceNumReceived,userID
     R = 0     
-
-    value = valueControl(messageType,R,sequenceNumReceived,ACK)
+    A = 1
+    value = valueControl(messageType,R,sequenceNumReceived,A)
 
     acknowledgement = ctypes.create_string_buffer(5)
     struct.pack_into('>BBBH', acknowledgement, 0,value,userID,0x00,0x0005)  
@@ -307,7 +307,7 @@ def groupInvitationAccept():
     global sequenceNumSend,userID,groupID_private,typeServer,sourceID
     messageType = 10
     R = 0     
-    A = 1
+    A = 0
     value = valueControl(messageType,R,sequenceNumSend,A)
     if typeServer == 1:
         print("group centralized")
@@ -318,19 +318,28 @@ def groupInvitationAccept():
     print("userID in group invitation accept : "+str(userID))    
     print("sourceID in group invitation accept : "+str(sourceID))
     groupInvitationAccept = ctypes.create_string_buffer(9)
-    struct.pack_into('>BBBHBBB', groupInvitationAccept, 0,value,sourceID,0x00,0x0008,typeServer,groupID_private,userID) 
+    struct.pack_into('>BBBHBBB', groupInvitationAccept, 0,value,sourceID,0x00,0x0007,typeServer,groupID_private,userID) 
     
     return groupInvitationAccept
 
-def groupInvitationReject(sequenceNum,sourceID):
+def groupInvitationReject():
+    global sequenceNumSend,userID,groupID_private,typeServer,sourceID
     messageType = 11
     R = 0     
-    A = 1
-    value = valueControl(messageType,R,sequenceNum,A)
+    A = 0
+    value = valueControl(messageType,R,sequenceNumSend,A)
+    if typeServer == 1:
+        print("group centralized")
+    else :
+        print("group decentralized")
+        
+    typeServer = typeServer <<7
+    print("userID in group invitation accept : "+str(userID))    
+    print("sourceID in group invitation accept : "+str(sourceID))
 
-    groupInvitationReject = ctypes.create_string_buffer(7)
-    struct.pack_into('bbbHbb', groupInvitationReject, 0,value,sourceID,0x00,0x0008)
-
+    groupInvitationReject = ctypes.create_string_buffer(9)
+    struct.pack_into('>BBBHBBB', groupInvitationReject, 0,value,sourceID,0x00,0x0007,typeServer,groupID_private,userID)
+    return groupInvitationReject
 
 def groupDisjointRequest(sequenceNum,sourceID):
     messageType = 12
@@ -548,7 +557,7 @@ while True :
             if flag == False:           
                 if(messageType == 0x04 and ACK ==1):
                     if(sequenceNumReceived == sequenceNumSend):
-                        print("!!!!!!!!!!!!!!!!!!!")
+                        print("##############################################")
                         print("it is userList respond")
             #            sourceID = getClientID(data,userList)
             #            print("clientID : "+ str(clientID))
@@ -563,7 +572,7 @@ while True :
     
                 elif(messageType == 0x05 and ACK ==1):
                     if(sequenceNumReceived == sequenceNumSend):
-                        print("!!!!!!!!!!!!!!!!!!!")
+                        print("##############################################")
                         print("ACK of server transfer the message  ")
                         print("ACK in 0x0A :"  +str(ACK))          
                          
@@ -573,38 +582,57 @@ while True :
                         
     
     #    clientID = struct.unpack_from('B', Accept,5)%s
-                elif(messageType == 0x07 and ACK ==1 ):
+#######################################"  group creation success
+                elif(messageType == 0x07 ):
+                    
+            
+                    print("##############################################")
+                     
+                    print("server creation accepted")
+                    
+                    print("userID in 0x07 : "+str(userID))
+#                        print("sourceID in 0x07 : "+str(sourceID))
+                    groupID_private = getID_private(data)
+                    print("groupID_private in 0x07 : "+str(groupID_private))
+                    print("userList in 0x07 before: "+ str(userList))
+        #            sourceID = getClientID(data)
+        #            print("clientID : "+ str(clientID))
+                                            
+                    
+                    userList[userID][1] = groupID_private
+#                    userList[sourceID][1] = groupID_private
+#                        userList[sourceID][1] = groupID_private
+                    groupID = groupID_private 
+                    print("userList in 0x07 after: "+ str(userList))             
+                    acknow = acknowledgement()
+                    s.sendto(acknow,addr)
+                    print("ACK in 0x07 : "+str(ACK)) 
+                    print("I have received server creation accepted")        
+                    print("##############################################")
+                        
+                        
+ #######################################  group creation failed                       
+                elif(messageType == 0x08 and ACK==0):
+#                    if(sequenceNumReceived == sequenceNumSend):
+                    print("##############################################")
+                     
+                    print("server creation refused")
+                    print("ID_invited_list : "+ str(ID_invited_list))
+                    ID_invited_list = []
+                    print("after delete the client, ID_invited_list : "+ str(ID_invited_list))  
+                    acknow = acknowledgement()
+                    s.sendto(acknow,addr)
+                    print("##############################################")
+                        
+
+
+
+#######################################  client join a group success 
+                elif(messageType == 0x0A and ACK ==1 ):
                     if(sequenceNumReceived == sequenceNumSend):
             
-                        print("!!!!!!!!!!!!!!!!!!!")
-                         
-                        print("server creation accepted")
-                        
-                        print("userID in 0x07 : "+str(userID))
-#                        print("sourceID in 0x07 : "+str(sourceID))
-                        groupID_private = getID_private(data)
-                        print("groupID_private in 0x07 : "+str(groupID_private))
-                        print("userList in 0x07 before: "+ str(userList))
-            #            sourceID = getClientID(data)
-            #            print("clientID : "+ str(clientID))
-                                                
-                        
-                        userList[userID][1] = groupID_private
-                        userList[sourceID][1] = groupID_private
-#                        userList[sourceID][1] = groupID_private
-                        groupID = groupID_private 
-                        print("userList in 0x07 after: "+ str(userList))             
-                        acknow = acknowledgement()
-                        s.sendto(acknow,addr)
-                        print("I have received server creation accepted")            
-                        
-     
-            
-#                elif(messageType == 0x0A and ACK ==1 ):
-#                    if(sequenceNumReceived == sequenceNumSend):
-#            
-#                        print("!!!!!!!!!!!!!!!!!!!")
-#                        print("server transfered invitation accepted")
+                        print("##############################################")
+                        print("join a group success")
 #                        print("userID in 0x0A : "+str(userID))         
 #                        print("groupID_private in 0x07 : "+str(groupID_private))
 #                        print("userList in 0x0A before: "+ str(userList))
@@ -613,16 +641,25 @@ while True :
 #                        userList[userID][1] = groupID_private
 #                        groupID = groupID_private          
 #                        print("userList in 0x0A after: "+ str(userList))
-#                        acknow = acknowledgement()
-#                        s.sendto(acknow,addr)             
-#                        print("join a group success")
-              
-                            
-                          
+                        
+                        acknow = acknowledgement()
+                        s.sendto(acknow,addr)
+                        print("ACK in 0x0A : "+str(ACK)) 
+                        print("##############################################")
+                        
+                        
+ #######################################"  client refuse invitation sucess         
+                elif(messageType == 0x0B and ACK ==1 ):
+                    if(sequenceNumReceived == sequenceNumSend):
+            
+                        print("##############################################")
+                        print("refuse invitation sucess")
+                        print("##############################################")    
+####################################### disconnection                          
                 elif(messageType == 0x10 and ACK ==1):
                     if(sequenceNumReceived == sequenceNumSend):
             
-                        print("!!!!!!!!!!!!!!!!!!!")
+                        print("##############################################")
                         print("it is disconnection ACK")
     
     #    clientID = struct.unpack_from('B', Accept,5)
@@ -638,22 +675,43 @@ while True :
                         
                         
                 elif(messageType == 0x11):
-                        print("!!!!!!!!!!!!!!!!!!!")
-                        print(" serverTransferGroupInvitation from client %s" %userID)
-                        print("ACK in 0x11 :"  +str(ACK))          
+                        print("##############################################")
                         sourceID = getSourceID(data)
+                        print("sourceID in 0x11 :" +str(sourceID))
+                        print(" serverTransferGroupInvitation from client %s" %sourceID)
+                        print("ACK in 0x11 :"  +str(ACK))          
+                        
     
     #    clientID = struct.unpack_from('B', Accept,5)
                         print("messageType in 0x11 :" + str(messageType))
-                        print("sourceID in 0x11 :" +str(sourceID))
-                        groupInvA = groupInvitationAccept()
-                        s.sendto(groupInvA,addr)              
+                        
+                        print("ACK in 0x11 :"  +str(ACK))          
+                        sourceID = getSourceID(data)
+                        
+                        
+#                        acknow = acknowledgement()
+#                        s.sendto(acknow,addr)
+#                        time.sleep(0.2)
+                        
+                        print("choose if you acepet an invitation, Y or N")
+                        mes = raw_input()
+                        if mes =='Y':
+                            print("agree to join a group private")
+                            groupInvA = groupInvitationAccept()
+                            s.sendto(groupInvA,addr)
+                        else : 
+                            print("refuse invitation")
+                            groupInvR = groupInvitationReject()
+                            s.sendto(groupInvR,addr)
             #            clientID = getClientID(data)%s
             #            print("clientID : "+ str(clientID))
                         
-    
         #            print("userList"+str(userList)
+                        
+                        
+   ###################################################################################sender                     
         else :
+            print("##############################################")
             print ("chose type to do")
             mType = sys.stdin.readline().strip()
 

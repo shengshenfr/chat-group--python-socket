@@ -5,7 +5,7 @@ import ctypes
 import struct
 import argparse
 from socerr import socerr
-from twisted.internet import reactor
+import time
  
 PORT = 1250
 HOST = 'localhost'
@@ -19,6 +19,7 @@ usernameList = []
 userList = {}
 clientID = 0
 groupID =0x01
+sequenceNumSend = 0
 sequenceNumReceived = 0
 groupPrivateList = []
 groupID_private = 1
@@ -278,7 +279,7 @@ def groupCreationAccept():
     global sequenceNumReceived,groupPrivateList,groupID,messageType,typeServer, groupID_private,sourceID
     messageType  = 7
     R = 0     
-    A = 1
+    A = 0
     value = valueControl(messageType,R,sequenceNumReceived,A)
         
     typeServer = typeServer <<7
@@ -295,19 +296,19 @@ def groupCreationAccept():
     return groupCreationAccept
 
 def groupCreationReject():
-    global sequenceNumReceived,clientID,messageType
+    global sequenceNumReceived,sourceID,messageType
     messageType  = 8
     R = 0     
-    A = 1
+    A = 0
     value = valueControl(messageType,R,sequenceNumReceived,A)
 
     groupCreationReject = ctypes.create_string_buffer(5)
-    struct.pack_into('>BBBH', groupCreationReject, 0,value,clientID,0x00,0x0005) 
+    struct.pack_into('>BBBH', groupCreationReject, 0,value,sourceID,0x00,0x0005) 
     
     return  groupCreationReject
 
 def serverTransferGroupInvitation(s,clientInvited,typeServer):
-    global sequenceNumReceived,clientID,groupID,userList,groupID_private
+    global sequenceNumSend,clientID,groupID,userList,groupID_private
     print(clientInvited)
     client_invited_list = []   
     print(len(clientInvited))
@@ -367,7 +368,8 @@ def dataReceived(s,data,addr):
     messageType = getType(data)
     print("messageType : "+ str(messageType))
     sequenceNumReceived =  getSequenceNumber(data)
-    print("sequenceNumReceived : "+ str(sequenceNumReceived) )
+    print("sequenceNumReceived : "+ str(sequenceNumReceived))
+    print("sequenceNumSend : "+ str(sequenceNumSend))
     ACK = getACK(data)    
     print("ACK : "+ str(ACK)) 
 #    groupID = getGroupID(data)    
@@ -376,7 +378,7 @@ def dataReceived(s,data,addr):
     if (messageType == 0x00):
 #   server receive client's connection, and the choose if the length is more than
 #   the range of server, length of username, if existed
-        print("#######################")
+        print("##############################################")
         print("it is connection from client")
         username = getUsername(data)
 #        print("username in 0x00: "+ str(username))
@@ -406,7 +408,7 @@ def dataReceived(s,data,addr):
             print("server is full")
 
     elif(messageType == 0x01 and ACK==1):
-        print("#######################")
+        print("##############################################")
         print("ACK in 0x01 :"  +str(ACK))
         print("it is connection ACK from client ")
 #        sourceID = getSourceID(data)
@@ -415,7 +417,7 @@ def dataReceived(s,data,addr):
         
     elif(messageType == 0x10):
         if ACK == 0:
-            print("#######################")
+            print("##############################################")
             print("it is disconnection request")
 #        sourceID = getSourceID(data)
 #        print("sourceID : "+ str(sourceID))
@@ -428,7 +430,7 @@ def dataReceived(s,data,addr):
       
      
     elif (messageType == 0x03):
-        print("#######################")
+        print("##############################################")
         print("userList Request")
 
         print("clientID : "+ str(clientID))
@@ -438,7 +440,7 @@ def dataReceived(s,data,addr):
         
         
     elif(messageType == 0x04 and ACK==1):
-        print("#######################")
+        print("##############################################")
         print("ACK in 0x04 :"  +str(ACK))
         print("client  has received userList respond" )        
         
@@ -452,7 +454,7 @@ def dataReceived(s,data,addr):
 #        s.sendto(userListResponse,addr)
         
     elif (messageType == 0x05):
-        print("#######################")
+        print("##############################################")
         print("transfer a message from client")
         respond = acknowledgement()
         s.sendto(respond,addr)
@@ -460,9 +462,9 @@ def dataReceived(s,data,addr):
             if i is not addr:
 
                 s.sendto(data,i)        
-        
+######################################    server receives a group creation request and transfer group invitation    
     elif(messageType == 0x06):
-        print("#######################")
+        print("##############################################")
         print("server receives a group creation request")
         clientInvited = getClientInvited(data)
 #        print("clientInvited : " + str(clientInvited))
@@ -480,40 +482,88 @@ def dataReceived(s,data,addr):
             print("group centralized")
         else :
             print("group decentralized")
-            
-            
+                       
         serverTransferGroupInvitation(s,clientInvited,typeServer)
-        
-    elif(messageType == 0x0A and ACK==1):
+
+
+######### if client has accepted invitation        
+    elif(messageType == 0x0A and ACK == 0):
         print("#######################")
+        print("length data" +str(len(data)))
         print("ACK in 0x0A :"  +str(ACK))
         sourceID = getSourceID(data)
         userID = getUserID(data)
-        print("client %s has accepted invitation" %userID)   
-        groupCA = groupCreationAccept()
-        print("userList in 0x0A : " +str(userList))
-        respond = acknowledgement()          
+        print("client %s has accepted invitation" %userID) 
         
         for i in userList:
             if i == sourceID:
-                addr1 = userList[i][2]
-                s.sendto(groupCA, addr1)
+                addr1 = userList[sourceID][2]
+
+                groupCA = groupCreationAccept()
+                        
+                print("userList in 0x0A : " +str(userList))
+                s.sendto(groupCA, addr1)        
                 print("send groupCA")
             else :
-                addr2 = userList[i][2]
-        
+                addr2 = userList[userID][2]
+              
+            ######### send  client invited, ACK
+                print("messageType :"+str(messageType))
+                respond = acknowledgement() 
+                s.sendto(respond, addr2)                
+                print("send invitation ACK")                   
+######### send source client who demande a group requesnt, a group creation accept
 
-                s.sendto(groupCA, addr2)                
-                print("send invitation ACK")        
-#        print("addr1 of client1 in 0x0A :"+str(addr1))
-#        addr2 = userList[2][2]
-#        print("addr2 of client2 in 0x0A :"+str(addr2))
+    elif(messageType == 0x0A and ACK == 1):   
+        print("#######################")
+        print("JOIN success")        
+        
     elif(messageType == 0x07 and ACK==1):
         print("#######################")
         print("group success")
+
+      
+#        print("addr1 of client1 in 0x0A :"+str(addr1))
+#        addr2 = userList[2][2]
+#        print("addr2 of client2 in 0x0A :"+str(addr2))
+                
+##########when client invited refuse the invitation                
+    elif(messageType == 0x0B and ACK==0):
+        print("#######################")
+        print("ACK in 0x0B :"  +str(ACK))
+        sourceID = getSourceID(data)
+        userID = getUserID(data)
+        print("client %s has refused invitation" %userID)   
+        
+        print("userList in 0x0A : " +str(userList))
+                  
+############# send source client a group creation refused        
+        for i in userList:
+            if i == sourceID:
+                addr1 = userList[i][2]
+                print("sequenceNumSend in 0x0A" + str(sequenceNumSend))
+                groupCR = groupCreationReject()
+                s.sendto(groupCR, addr1)
+
+                print("send groupCR")
+            else :
+                #############          send client invited a ACK
+                addr2 = userList[i][2]
+        
+                messageType = 0x0B
+                respond = acknowledgement()
+                s.sendto(respond, addr2)                
+                print("send refused invitation ACK")              
+    
+                  
+                
+                
+
         
     
-     
+#    elif(messageType == 0x11 ):
+#        print("#######################")
+#        print("get transfered invitation success")     
        
         
 
