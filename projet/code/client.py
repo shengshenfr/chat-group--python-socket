@@ -4,16 +4,17 @@ import select
 import ctypes
 import struct
 import argparse
-from multiprocessing import Queue, Process
+
 import time
 from socerr import socerr 
-from twisted.internet import reactor
+from mythread2 import * 
+
 
 PORT = 1250
 HOST = 'localhost'
 addr = (HOST,PORT)
 #s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-s = socerr(socket.AF_INET, socket.SOCK_DGRAM,0)
+s = socerr(socket.AF_INET, socket.SOCK_DGRAM,50)
 s.connect((HOST,PORT))
 
 
@@ -447,6 +448,7 @@ resendMessage = {}
 addr_type_sequenceNum_ACK = {}
 messageTypeList = ['A','B','C','D','E','F','O']
 inputs = [s, sys.stdin]
+thread_buf = {}
 
             
 while True :          
@@ -718,14 +720,50 @@ while True :
 
 
             if (mType == 'A'):
-
                 sequenceNumSend = (sequenceNumSend + 1)%2   
                 print("sequenceNumSend in main: "+ str(sequenceNumSend))
                 print("userListRequest")
                 userListRequest = userListRequest()
                 s.sendto(userListRequest,addr)
-
+                resendtime = 0
+                temps_break = 1
+                while True:
+                    resendtime += 1
+                    readable,writable,exceptional = select.select(inputs,[],[],0.5)
+                    exit_flag = False          
+                    for r in readable:
+                        # open the packet
+                        data,addr = s.recvfrom(1024)
+                        #print(data)
+                        messageType = getType(data)
+            #            print("messageType : "+ str(messageType) ) 
+                        sequenceNumReceived =  getSequenceNumber(data)
+                        ACK = getACK(data)
+                        #jiebao,success,break
+                        if(messageType == 0x04 and ACK ==1):
+                            if(sequenceNumReceived == sequenceNumSend):
+                                print("##############################################")
+                                print("it is userList respond")
+                                userList = getUserList(data)                               
+                                print("userList in 0x04 : "+ str(userList))                                           
+                                acknow = acknowledgement()
+                                s.sendto(acknow,addr)
+                                temps_break = 4
+                                break
+                    if temps_break >2:
+                        break
+                    s.sendto(userListRequest,addr)
+                    print("this is %s resendtime" %resendtime)
+                    if resendtime>resendTimeMax:
+                        print("the last packet lost")
+                if temps_break >3:
+                    break                           
                 
+#                stopFlag = Event()
+#                thread = MyThread(stopFlag,s,addr,buf,sequenceNumSend)
+#                thread.start()
+##                message = raw_input("Please enter your message: ")
+#                thread_buf[userID] = thread
 
                 # retransmission                
 #                retransmission(s,addr,userListRequest)
