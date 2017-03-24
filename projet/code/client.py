@@ -341,15 +341,16 @@ def groupInvitationReject():
     struct.pack_into('>BBBHBBB', groupInvitationReject, 0,value,sourceID,0x00,0x0007,typeServer,groupID_private,userID)
     return groupInvitationReject
 
-def groupDisjointRequest(sequenceNum,sourceID):
-    messageType = 12
+def groupDisjointRequest():
+    global messageType, sequenceNumSend,userID
+    messageType = 0x0C
     R = 0     
     A = 0
-    value = valueControl(messageType,R,sequenceNum,A)
+    value = valueControl(messageType,R,sequenceNumSend,A)
 
-    groupDisjointRequest = ctypes.create_string_buffer(5)
-    struct.pack_into('bbbH', groupDisjointRequest, 0,value,sourceID,0x00,0x0006) 
-
+    groupDisjointRequest = ctypes.create_string_buffer(6)
+    struct.pack_into('BBBH', groupDisjointRequest, 0,value,userID,0x00,0x0005) 
+    return groupDisjointRequest
 
 def retransmission(s,addr,buf):
     global messageType, sequenceNumReceived,ACK,resendTimeMax,sequenceNumSend
@@ -767,6 +768,14 @@ while True :
                 dataMessage = sendDataMessage(payload)
     
                 s.sendto(dataMessage,addr)
+                
+            elif(mType == 'disjoint'):
+                sequenceNumSend = (sequenceNumSend + 1)%2  
+                print("i want to leave the private group")
+
+                groupDR = groupDisjointRequest()
+    
+                s.sendto(groupDR,addr)
                 
             else:
                 print("wait")       

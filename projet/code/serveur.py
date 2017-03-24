@@ -13,7 +13,7 @@ s = socerr(socket.AF_INET, socket.SOCK_DGRAM, 0)
 #s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)	
 s.bind((HOST,PORT))
 
-inputs = [s]
+
 address = []
 usernameList = []
 userList = {}
@@ -21,7 +21,8 @@ clientID = 0
 groupID =0x01
 sequenceNumSend = 0
 sequenceNumReceived = 0
-groupPrivateList = []
+groupPrivateList =  {}
+publicList = []
 groupID_private = 1
 typeServer = 1
 sourceID = 0
@@ -113,7 +114,7 @@ def getGroupID(data):
 
 def getSourceID(data):
     sourceID = struct.unpack_from('>B', data,1)
-    print("sourceID: " + str(sourceID))
+#    print("sourceID: " + str(sourceID))
     
     return sourceID[0]  
     
@@ -165,6 +166,7 @@ def acknowledgement():
     global messageType, A,sequenceNumReceived
     R = 0     
     A = 1
+
     value = valueControl(messageType,R,sequenceNumReceived,A)
 
     acknowledgement = ctypes.create_string_buffer(5)
@@ -173,7 +175,7 @@ def acknowledgement():
 
 def connectionAccept(data):
     global clientID,groupID,messageType,sequenceNumReceived
-    global userList,usernameList
+    global userList,usernameList,publicList
     # response
     messageType = 1
     R = 0 
@@ -339,14 +341,16 @@ def serverTransferGroupInvitation(s,clientInvited,typeServer):
         print("!!!!!!!!!!!!!!!!!!!")
 
 
-def groupDissolution(sequenceNum,groupID):
-    messageType = 13
+def groupDissolution(group_delete):
+    global messageType, sequenceNumSend, groupPrivateList
+    messageType = 0x0D
     R = 0     
     A = 0
-    value = valueControl(messageType,R,sequenceNum,A)
-    groupDissolution = ctypes.create_string_buffer(5)
-    struct.pack_into('>BBBH', groupDissolution, 0,value,0x00,groupID,0x0006)  
+    value = valueControl(messageType,R,sequenceNumSend,A)
 
+    groupDissolution = ctypes.create_string_buffer(5)
+    struct.pack_into('>BBBH', groupDissolution, 0,value,0x00,group_delete,0x0005)  
+    return groupDissolution
 
 def updateDisconnection(sequenceNum,clientID,userList):
     messageType = 15
@@ -473,8 +477,8 @@ def dataReceived(s,data,addr):
 
         groupID_private = groupID + 1
         print("groupID_private in group Creation Accept : "+str(groupID_private))
-        groupPrivateList.append(groupID_private)
-        print("groupPrivateList in group Creation Accept : "+str(groupPrivateList))        
+#        groupPrivateList.append(groupID_private)
+#        print("groupPrivateList in group Creation Accept : "+str(groupPrivateList))        
         
         
         typeServer = getTypeServer(data)
@@ -514,14 +518,16 @@ def dataReceived(s,data,addr):
                 print("send invitation ACK")                   
 ######### send source client who demande a group requesnt, a group creation accept
 
-    elif(messageType == 0x0A and ACK == 1):   
+    elif((messageType == 0x0A and ACK == 1) or  (messageType == 0x07 and ACK==1)):   
         print("#######################")
-        print("JOIN success")        
-        
-    elif(messageType == 0x07 and ACK==1):
-        print("#######################")
-        print("group success")
-
+        print("group creation success")        
+        print("userList  : " +str(userList))
+        print("groupID_private : " +str(groupID_private))
+        groupPrivateList [groupID_private] = [userID,sourceID]
+        userList[userID][1] =  groupID_private
+        userList[clientID] [1] = groupID_private 
+        print("groupPrivateList" + str(groupPrivateList))
+        print("new userList : " +str(userList))
       
 #        print("addr1 of client1 in 0x0A :"+str(addr1))
 #        addr2 = userList[2][2]
@@ -558,6 +564,23 @@ def dataReceived(s,data,addr):
                   
                 
                 
+    elif(messageType == 0x0C and ACK==0):
+        print("#######################")
+        print("ACK in 0x0C :"  +str(ACK))
+        userID = getSourceID(data)
+        print("groupPrivateList" + str(groupPrivateList))
+        print("userList : "+ str(userList))
+        print("client %s leave private group and join in public" %userID)
+        group_private = userList[userID][1]
+        for i in range (len(groupPrivateList[group_private])):
+            if groupPrivateList[group_private][i] == userID:
+                temp = i
+                print("temp : "+str(temp))
+        del groupPrivateList[group_private][temp]
+                    
+        userList[userID][1] = 1
+        print(" new groupPrivateList" + str(groupPrivateList))
+        print("new userList : "+ str(userList))
 
         
     
@@ -587,7 +610,7 @@ def dataReceived(s,data,addr):
 #print(str(readable) + '\n')
 
 #print(str(inputs) + '\n')
-
+inputs = [s, sys.stdin]
 while True : 
     readable,writable,exceptional = select.select(inputs,[],[],0.2)    
     for r in readable:	
@@ -603,10 +626,45 @@ while True :
                 dataReceived(s,data,addr)
 
                 #print(str(inputs) + '\n')
-
-
             else:
                 address.remove(addr)
                 if len(address)==0:
                     s.close()
                     sys.exit()
+                    
+        else :
+            print("##############################################")
+            print ("chose type to do")
+            mType = sys.stdin.readline().strip()
+            if (mType == 'dissolution'):
+                print("groupPrivateList : " +str(groupPrivateList))
+                print("userList : " +str(userList))  
+#                group_delete = []
+                for i in groupPrivateList:
+                    n = len(groupPrivateList[i])
+                    print("n in dissolution : " +str(n))
+                    if n ==1:
+#                        group_delete.append[i]
+                        client_rest = groupPrivateList.pop(i)
+                        print("client_rest :" +str(client_rest) )
+                        ipAdrr_rest = userList[client_rest[0]][2]
+                        print("ipAdrr_rest :" +str(ipAdrr_rest) )
+                        groupD = groupDissolution(i)
+
+                    if n == 0:
+#                         group_delete.append[i]
+                        groupPrivateList.clear()
+                s.sendto(groupD,ipAdrr_rest)
+                print("send dissolution") 
+#                print("group_delete : "+str(group_delete))
+
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
+                        
