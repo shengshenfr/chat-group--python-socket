@@ -26,7 +26,8 @@ publicList = []
 groupID_private = 1
 typeServer = 1
 sourceID = 0
-userID = 0 
+userID = 0
+resendTimeMax = 5 
 
 def valueControl(messageType,R,S,ACK):
     value = messageType<<1    
@@ -237,7 +238,7 @@ def connectionReject(data,Error):
 
 
 def sendUserListResponse():
-    global usernameList,userList
+    global usernameList,userList,sequenceNumReceived
     type = 4
     R = 0     
     A = 1
@@ -260,22 +261,38 @@ def sendUserListResponse():
     userListResponse = struct.pack('>BBBH'+str(len(userListString))+'s', value,clientID,0x01,length,userListString)
         
     return userListResponse
-
-def updateList(sequenceNum,userList):
-    type = 14
+    
+    
+def sendDataMessage(payload):
+    global messageType,sequenceNumSend,clientID,groupID,addr_sequenceNum_ACK
+    messageType = 5
     R = 0     
     A = 0
-    value = valueControl(type,R,sequenceNum,A)
-    sourceID = 0x00
+    value = valueControl(messageType,R,sequenceNumSend,A)    
+
+#    payloadLength = len(pay#sequenceNumReceived =  getSequenceNumber(data)load)
+#    print("payloadLength : " + str(payloadLength))
+    dataMessage = struct.pack('>BBBHH' + str(len(payload)) + 's', value, clientID, groupID,0x0008,len(payload),payload)
+    print(dataMessage)
     
-    numberUsers = len(userList)
-    length = 5 + numberUsers
-    for iUser in numberUsers:
-        clientID = userList[iUser].clentID
-        groupID = userList[iUser].groupID
-        username = userList[iUser].username
-        updateList = ctypes.create_string_buffer(length)
-        struct.pack_into('>BBBHBB8s', updateList, 0,value,sourceID,0xFF,length,clientID,groupID,username) 
+    return dataMessage
+    
+def updateList():
+    global usernameList,userList,sequenceNumSend,messageType
+    messageType = 14
+    R = 0     
+    A = 0
+    value = valueControl(messageType,R,sequenceNumSend,A)
+    
+ 
+    length = len(userList) + 5
+    print("usernameList : "+str(usernameList))    
+    print("userList : "+str(userList))
+    userListString = str(userList)
+    print("userListString : "+str(userListString))
+    updateList = struct.pack('>BBBH'+str(len(userListString))+'s', value,0x00,0xFF,length,userListString)
+        
+    return updateList
    
 def groupCreationAccept():
     global sequenceNumReceived,groupPrivateList,groupID,messageType,typeServer, groupID_private,sourceID
@@ -348,24 +365,25 @@ def groupDissolution(group_delete):
     A = 0
     value = valueControl(messageType,R,sequenceNumSend,A)
 
-    groupDissolution = ctypes.create_string_buffer(5)
+    groupDissolution = ctypes.create_string_buffer(6)
     struct.pack_into('>BBBH', groupDissolution, 0,value,0x00,group_delete,0x0005)  
     return groupDissolution
 
-def updateDisconnection(sequenceNum,clientID,userList):
-    messageType = 15
+def updateDisconnection(clientID_quit):
+    global messageType, sequenceNumSend, userList
+    messageType = 0x0F
     R = 0     
     A = 0
-    value = valueControl(messageType,R,sequenceNum,A)
-    userList.remove(clientID)
+    value = valueControl(messageType,R,sequenceNumSend,A)
+    
 
-    updateDisconnection = ctypes.create_string_buffer(6)
-    struct.pack_into('>BBBHB', updateDisconnection, 0,value,0x00,0xFF,0x0008,clientID)  
-
+    updateDisconnection = ctypes.create_string_buffer(7)
+    struct.pack_into('>BBBHB', updateDisconnection, 0,value,0x00,0xFF,0x0006,clientID_quit)  
+    return updateDisconnection
 
 def dataReceived(s,data,addr):
     global clientID,groupID,messageType,groupID_private,sourceID,address,userID
-    global sequenceNumReceived,typeServer
+    global sequenceNumReceived,typeServer,resendTimeMax,sequenceNumSend
     global userList,usernameList    
 
 
@@ -379,7 +397,7 @@ def dataReceived(s,data,addr):
 #    groupID = getGroupID(data)    
 #    print("groupID : "+ str(groupID))     
 #    
-    if (messageType == 0x00):
+    if (messageType == 0x00 and ACK ==0):
 #   server receive client's connection, and the choose if the length is more than
 #   the range of server, length of username, if existed
         print("##############################################")
@@ -396,18 +414,112 @@ def dataReceived(s,data,addr):
                 print("maximum number of users exceeded")
                 Reject = connectionReject(data,Error)
                 s.sendto(Reject,addr)
+                
+                ###############retransmission
+#                resendtime = 0
+#                temps_break = 1
+#                while True:
+#                    resendtime += 1
+#                    readable,writable,exceptional = select.select(inputs,[],[],0.5)          
+#                    for r in readable:
+#                        # open the packet
+#                        data,addr = s.recvfrom(1024)
+#                        #print(data)
+#                        messageType = getType(data)
+#            #            print("messageType : "+ str(messageType) ) 
+#                        sequenceNumReceived =  getSequenceNumber(data)
+#                        ACK = getACK(data)
+#                        #jiebao,success,break
+#                        if(messageType == 0x02 and ACK ==1):
+#                            if(sequenceNumReceived == sequenceNumSend):
+#                                print("##############################################")
+#                                print("client has received the packet of connection reject 1")
+#                                temps_break = 4
+#                                break
+#                    if temps_break >2:
+#                        break
+#                    s.sendto(Reject,addr)
+#                    print("this is %s resendtime" %(resendtime-1))
+#                    if resendtime>resendTimeMax:
+#                        print("the last packet lost")
+#                        break
+#                if temps_break >3:
+#                    break 
+                
             else :     
 
                 if username not in usernameList:
                     print("connection accept in server")
                     Accept = connectionAccept(data)
                     s.sendto(Accept,addr)
+                    
+#                    resendtime = 0
+#                    temps_break = 1
+#                    while True:
+#                        resendtime += 1
+#                        readable,writable,exceptional = select.select(inputs,[],[],0.5)          
+#                        for r in readable:
+#                            # open the packet
+#                            data,addr = s.recvfrom(1024)
+#                            #print(data)
+#                            messageType = getType(data)
+#                #            print("messageType : "+ str(messageType) ) 
+#                            sequenceNumReceived =  getSequenceNumber(data)
+#                            ACK = getACK(data)
+#                            #jiebao,success,break
+#                            if(messageType == 0x01 and ACK ==1):
+#                                if(sequenceNumReceived == sequenceNumSend):
+#                                    print("##############################################")
+#                                    print("client has received the packet of connection accept")
+#                                    temps_break = 4
+#                                    break
+#                        if temps_break >2:
+#                            break
+#                        s.sendto(Accept,addr)
+#                        print("this is %s resendtime" %(resendtime-1))
+#                        if resendtime>resendTimeMax:
+#                            print("the last packet lost")
+#                            break
+#                    if temps_break >3:
+#                        break 
     
                 else :
                     Error = 0
                     print("uername already taken")  
                     Reject = connectionReject(data,Error)
                     s.sendto(Reject,addr)
+                    
+#                    resendtime = 0
+#                    temps_break = 1
+#                    while True:
+#                        resendtime += 1
+#                        readable,writable,exceptional = select.select(inputs,[],[],0.5)          
+#                        for r in readable:
+#                            # open the packet
+#                            data,addr = s.recvfrom(1024)
+#                            #print(data)
+#                            messageType = getType(data)
+#                #            print("messageType : "+ str(messageType) ) 
+#                            sequenceNumReceived =  getSequenceNumber(data)
+#                            ACK = getACK(data)
+#                            #jiebao,success,break
+#                            if(messageType == 0x02 and ACK ==1):
+#                                if(sequenceNumReceived == sequenceNumSend):
+#                                    print("##############################################")
+#                                    print("client has received the packet of connection reject 2")
+#                                    temps_break = 4
+#                                    break
+#                        if temps_break >2:
+#                            break
+#                        s.sendto(Reject,addr)
+#                        print("this is %s resendtime" %(resendtime-1))
+#                        if resendtime>resendTimeMax:
+#                            print("the last packet lost")
+#                            break
+##                    if temps_break >3:
+#                        break                     
+                    
+                    
         else :
             print("server is full")
 
@@ -418,18 +530,7 @@ def dataReceived(s,data,addr):
 #        sourceID = getSourceID(data)
 #        print("sourceID : "+ str(sourceID))
 
-        
-    elif(messageType == 0x10):
-        if ACK == 0:
-            print("##############################################")
-            print("it is disconnection request")
-#        sourceID = getSourceID(data)
-#        print("sourceID : "+ str(sourceID))
 
-            respond = acknowledgement()
-            s.sendto(respond,addr)
-        else :
-            print("disconnection ACK from client %s"%clientID)
         
       
      
@@ -457,15 +558,22 @@ def dataReceived(s,data,addr):
 #        userListResponse = sendUserListResponse()
 #        s.sendto(userListResponse,addr)
         
-    elif (messageType == 0x05):
+    elif (messageType == 0x05 and ACK == 0):
         print("##############################################")
         print("transfer a message from client")
         respond = acknowledgement()
         s.sendto(respond,addr)
+        payload = getPayload(data)
+        sequenceNumSend = (sequenceNumSend + 1)%2   
+        dataMessage = sendDataMessage(payload)
+        print("address :" +str(address))
         for i in address:
-            if i is not addr:
-
-                s.sendto(data,i)        
+            print(addr==i)  
+            if i != addr:
+                
+                print("addr :" +str(addr))
+                print("i :" +str(i))
+                s.sendto(dataMessage,i)        
 ######################################    server receives a group creation request and transfer group invitation    
     elif(messageType == 0x06):
         print("##############################################")
@@ -582,7 +690,25 @@ def dataReceived(s,data,addr):
         print(" new groupPrivateList" + str(groupPrivateList))
         print("new userList : "+ str(userList))
 
-        
+
+    elif(messageType == 0x0E and ACK==1):
+        print("#######################")
+        print("ACK in 0x0C :"  +str(ACK))
+
+        print("client update list success" )
+
+
+    elif(messageType == 0x10):
+        if ACK == 0:
+            print("##############################################")
+            print("it is disconnection request")
+#        sourceID = getSourceID(data)
+#        print("sourceID : "+ str(sourceID))
+
+            respond = acknowledgement()
+            s.sendto(respond,addr)
+        else :
+            print("disconnection ACK from client %s"%clientID)       
     
 #    elif(messageType == 0x11 ):
 #        print("#######################")
@@ -612,7 +738,7 @@ def dataReceived(s,data,addr):
 #print(str(inputs) + '\n')
 inputs = [s, sys.stdin]
 while True : 
-    readable,writable,exceptional = select.select(inputs,[],[],0.2)    
+    readable,writable,exceptional = select.select(inputs,[],[])    
     for r in readable:	
         if s==r:
             data,addr = s.recvfrom(1024)
@@ -620,7 +746,9 @@ while True :
 #            print (data)
 
             #print(str(data) + '\n')
-            address.append(addr)
+            if addr not in address:
+                address.append(addr)
+                print("address in main :" +str(address))
             if data !="end":
                 print ('connected by',addr)
                 dataReceived(s,data,addr)
@@ -636,7 +764,9 @@ while True :
             print("##############################################")
             print ("chose type to do")
             mType = sys.stdin.readline().strip()
+            
             if (mType == 'dissolution'):
+                sequenceNumSend = (sequenceNumSend + 1)%2
                 print("groupPrivateList : " +str(groupPrivateList))
                 print("userList : " +str(userList))  
 #                group_delete = []
@@ -657,6 +787,35 @@ while True :
                 s.sendto(groupD,ipAdrr_rest)
                 print("send dissolution") 
 #                print("group_delete : "+str(group_delete))
+                
+            if (mType == 'updateList'):
+                sequenceNumSend = (sequenceNumSend + 1)%2
+                print("groupPrivateList : " +str(groupPrivateList))
+                print("userList : " +str(userList))  
+#                group_delete = []
+                updateList = updateList()
+                for i in address:
+                    s.sendto(updateList,i) 
+               
+                print("send updateList")
+                
+            if (mType == 'updateDisconnection'):
+                sequenceNumSend = (sequenceNumSend + 1)%2
+                print("input clientID who leave the system")
+                print("old userList : " +str(userList))  
+                clientID_quit = raw_input()
+                clientID_quit = int(clientID_quit)
+                print("groupPrivateList : " +str(groupPrivateList))
+                del userList[clientID_quit]
+                print("new userList : " +str(userList))  
+#                group_delete = []
+                updateDisconnection = updateDisconnection(clientID_quit)
+                
+                for i in address:
+                    s.sendto(updateDisconnection,i) 
+               
+                print("send updateDisconnection")
+                                
 
                         
                         

@@ -7,14 +7,13 @@ import argparse
 
 import time
 from socerr import socerr 
-from mythread2 import * 
 
 
 PORT = 1250
 HOST = 'localhost'
 addr = (HOST,PORT)
 #s = socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-s = socerr(socket.AF_INET, socket.SOCK_DGRAM,50)
+s = socerr(socket.AF_INET, socket.SOCK_DGRAM,80)
 s.connect((HOST,PORT))
 
 
@@ -198,10 +197,10 @@ def connection(s,addr):
     print("are you want to connect, please input your username")
     username = raw_input()
     print("username :" +str(username))
-
-    connect = ctypes.create_string_buffer(14)
+    
+#    connect = ctypes.create_string_buffer(14)
         #put data into the buffer
-    connect = struct.pack('>BBBH'+str(len(username)) + 's',0x00,0x00,0x00,0x000E,username)
+    connect = struct.pack('>BBBH8s',0x00,0x00,0x00,0x000E,username)
     s.sendto(connect,addr)
 #    sendData(connect,addr)
 
@@ -240,7 +239,7 @@ def sendDataMessage(payload):
     R = 0     
     A = 0
     value = valueControl(messageType,R,sequenceNumSend,A)    
-    addr_type_sequenceNum_ACK [addr_from] = [messageType,sequenceNumSend,ACK]
+
 #    payloadLength = len(pay#sequenceNumReceived =  getSequenceNumber(data)load)
 #    print("payloadLength : " + str(payloadLength))
     dataMessage = struct.pack('>BBBHH' + str(len(payload)) + 's', value, clientID, groupID,0x0008,len(payload),payload)
@@ -249,15 +248,7 @@ def sendDataMessage(payload):
     return dataMessage
     
     
-def sendData(buf, addr):
-    resendTime = 1
-    global resendtimeMax,timeout
-    print("send and wait time = " +str(resendTime))
-    resendTime +=1
-    if(resendTime <= resendTimeMax):
-        reactor.callLater(timeout,sendData,buf,resendTime)
-    else :
-        print("limited retry")
+
         
  
 def groupCreationRequest(ID_invited_list):
@@ -463,7 +454,6 @@ while True :
     while True:
         resendtime += 1
         readable,writable,exceptional = select.select(inputs,[],[],0.5)
-        exit_flag = False
 
         for r in readable:
             # open the packet
@@ -483,22 +473,30 @@ while True :
                 print("userID in 0x01: "+ str(userID))
                 #            sourceID = getClientID(data)
                 print("groupID in 0x01: "+ str(groupID))
+
+                print("receive packet connection accept and send ack")
+                
                 acknow = acknowledgement()
-                s.sendto(acknow,addr)
+                s.sendto(acknow,addr)                
+                
                 temps_break = 4
                 break
             elif (messageType == 0x02 and ACK == 1):
                 temps_break = 3
                 print("it is connectionReject")
-                
-                
+                acknow = acknowledgement()
+                s.sendto(acknow,addr)
+                print("receive packet connection reject and send ack")
         if temps_break >2:
             break
         username = connection(s,addr)
         print("this is %s resendtime" %resendtime)
         if resendtime>resendTimeMax:
-            print("the last packet lost")
+            print("the last packet lost")        
+            s.close()    
+            exit() 
     if temps_break >3:
+
         break            
 #            print("packet loss, this is  %s  resendtime"%(resendtime+1))
 #            resendtime = resendtime +1
@@ -556,29 +554,33 @@ while True :
                     print ("i have never received this packet")
                     addr_type_sequenceNum_ACK [addr_from] = [messageType,sequenceNumReceived,ACK]
                            
-           
-            if flag == False:           
-                if(messageType == 0x04 and ACK ==1):
-                    if(sequenceNumReceived == sequenceNumSend):
-                        print("##############################################")
-                        print("it is userList respond")
-            #            sourceID = getClientID(data,userList)
-            #            print("clientID : "+ str(clientID))
-                        userList = getUserList(data)
-                        
-                        print("userList in 0x04 : "+ str(userList))            
-                        
-                        acknow = acknowledgement()
-                        s.sendto(acknow,addr)
+            print("111111")
+            if flag == False:  
+                print("222222")
+#                if(messageType == 0x04 and ACK ==1):
+#                    if(sequenceNumReceived == sequenceNumSend):
+#                        print("##############################################")
+#                        print("it is userList respond")
+#            #            sourceID = getClientID(data,userList)
+#            #            print("clientID : "+ str(clientID))
+#                        userList = getUserList(data)
+#                        
+#                        print("userList in 0x04 : "+ str(userList))            
+#                        
+#                        acknow = acknowledgement()
+#                        s.sendto(acknow,addr)
                        
                         
     
-                elif(messageType == 0x05 and ACK ==1):
+                if(messageType == 0x05 and ACK == 0 ):
                     if(sequenceNumReceived == sequenceNumSend):
                         print("##############################################")
-                        print("ACK of server transfer the message  ")
-                        print("ACK in 0x0A :"  +str(ACK))          
-                         
+                        print("i have received the message that server transfers  ")
+                        print("ACK in 0x05 :"  +str(ACK))
+                        payload = getPayload(data)
+                        print("payload in 0x05 :"+str(payload))
+                        acknow = acknowledgement()
+                        s.sendto(acknow,addr)
             #            clientID = getClientID(data)
             #            print("clientID : "+ str(clientID))
                         
@@ -657,7 +659,40 @@ while True :
             
                         print("##############################################")
                         print("refuse invitation sucess")
-                        print("##############################################")    
+                        print("##############################################")
+                        
+                        
+                elif(messageType == 0x0E and ACK == 0):
+                    if(sequenceNumReceived == sequenceNumSend):
+                        print("##############################################")
+                        print("update userList broadcast from client")
+            #            sourceID = getClientID(data,userList)
+            #            print("clientID : "+ str(clientID))
+                        userList = getUserList(data)
+                        
+                        print("userList in 0x0E : "+ str(userList))            
+                        
+                        acknow = acknowledgement()
+                        s.sendto(acknow,addr)
+                        print("##############################################")
+                
+                elif(messageType == 0x0F and ACK == 0):
+                    if(sequenceNumReceived == sequenceNumSend):
+                        print("##############################################")
+                        print("update disconnection broadcast from client")
+            #            sourceID = getClientID(data,userList)
+            #            print("clientID : "+ str(clientID))
+                        
+                        
+                        print("old userList in 0x0E : "+ str(userList))            
+                        clientID_quit = getClientID(data)
+                        print("clientID_quit : "+str(clientID_quit))
+                        del userList[clientID_quit]
+                        print("new userList : " +str(userList))                          
+                        acknow = acknowledgement()
+                        s.sendto(acknow,addr)
+                        print("##############################################")             
+                        
 ####################################### disconnection                          
                 elif(messageType == 0x10 and ACK ==1):
                     if(sequenceNumReceived == sequenceNumSend):
@@ -729,8 +764,7 @@ while True :
                 temps_break = 1
                 while True:
                     resendtime += 1
-                    readable,writable,exceptional = select.select(inputs,[],[],0.5)
-                    exit_flag = False          
+                    readable,writable,exceptional = select.select(inputs,[],[],0.5)       
                     for r in readable:
                         # open the packet
                         data,addr = s.recvfrom(1024)
@@ -748,6 +782,7 @@ while True :
                                 print("userList in 0x04 : "+ str(userList))                                           
                                 acknow = acknowledgement()
                                 s.sendto(acknow,addr)
+                                
                                 temps_break = 4
                                 break
                     if temps_break >2:
@@ -794,7 +829,48 @@ while True :
                 print("sequenceNumSend in main: "+ str(sequenceNumSend)) 
                 disconnectionRequest = disconnectionRequest()
                 s.sendto(disconnectionRequest,addr)
-                                    
+                resendtime = 0
+                temps_break = 1
+                while True:
+                    resendtime += 1
+                    readable,writable,exceptional = select.select(inputs,[],[],0.5)         
+                    for r in readable:
+                        # open the packet
+                        data,addr = s.recvfrom(1024)
+                        #print(data)
+                        messageType = getType(data)
+            #            print("messageType : "+ str(messageType) ) 
+                        sequenceNumReceived =  getSequenceNumber(data)
+                        ACK = getACK(data)
+                        #jiebao,success,break
+                        if(messageType == 0x10 and ACK ==1):
+                            if(sequenceNumReceived == sequenceNumSend):
+                    
+                                print("##############################################")
+                                print("it is disconnection ACK")
+            
+            #    clientID = struct.unpack_from('B', Accept,5)
+                                print("ACK in 0x10 :"  +str(ACK))         
+                                acknow = acknowledgement()
+                                s.sendto(acknow,addr)              
+                    #            clientID = getClientID(data)
+                    #            print("clientID : "+ str(clientID))
+                                temps_break = 4
+                                print("session end")
+                                s.close()    
+                                exit()  
+#                                print("ACK in 0x0A :"  +str(ACK))                                             
+#                                acknow = acknowledgement()
+#                                s.sendto(acknow,addr)                                
+                                break
+                    if temps_break >2:
+                        break
+                    s.sendto(disconnectionRequest,addr)
+                    print("this is %s resendtime" %resendtime)
+                    if resendtime>resendTimeMax:
+                        print("the last packet lost")
+                if temps_break >3:
+                    break                           
                 
             elif(mType == 'E'):
                 sequenceNumSend = (sequenceNumSend + 1)%2  
@@ -806,7 +882,38 @@ while True :
                 dataMessage = sendDataMessage(payload)
     
                 s.sendto(dataMessage,addr)
-                
+                resendtime = 0
+                temps_break = 1
+                while True:
+                    resendtime += 1
+                    readable,writable,exceptional = select.select(inputs,[],[],0.5)         
+                    for r in readable:
+                        # open the packet
+                        data,addr = s.recvfrom(1024)
+                        #print(data)
+                        messageType = getType(data)
+            #            print("messageType : "+ str(messageType) ) 
+                        sequenceNumReceived =  getSequenceNumber(data)
+                        ACK = getACK(data)
+                        #jiebao,success,break
+                        if(messageType == 0x05 and ACK ==1):
+                            if(sequenceNumReceived == sequenceNumSend):
+                                print("##############################################")
+                                print("ACK of server transfer the message success ")
+#                                print("ACK in 0x0A :"  +str(ACK))                                             
+#                                acknow = acknowledgement()
+#                                s.sendto(acknow,addr)
+                                temps_break = 4
+                                break
+                    if temps_break >2:
+                        break
+                    s.sendto(dataMessage,addr)
+                    print("this is %s resendtime" %resendtime)
+                    if resendtime>resendTimeMax:
+                        print("the last packet lost")
+                if temps_break >3:
+                    break                           
+                                
             elif(mType == 'disjoint'):
                 sequenceNumSend = (sequenceNumSend + 1)%2  
                 print("i want to leave the private group")
