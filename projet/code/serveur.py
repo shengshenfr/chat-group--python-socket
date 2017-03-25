@@ -27,7 +27,7 @@ groupID_private = 1
 typeServer = 1
 sourceID = 0
 userID = 0
-resendTimeMax = 5 
+resendTimeMax = 5
 
 def valueControl(messageType,R,S,ACK):
     value = messageType<<1    
@@ -238,7 +238,7 @@ def connectionReject(data,Error):
 
 
 def sendUserListResponse():
-    global usernameList,userList,sequenceNumReceived
+    global usernameList,userList,sequenceNumReceived,userID
     type = 4
     R = 0     
     A = 1
@@ -258,13 +258,13 @@ def sendUserListResponse():
 #        ipAddress = userList[iUser][2][0]
 #        port = int(userList[iUser][2][1])       
 #    userListResponse = ctypes.create_string_buffer(21)
-    userListResponse = struct.pack('>BBBH'+str(len(userListString))+'s', value,clientID,0x01,length,userListString)
+    userListResponse = struct.pack('>BBBH'+str(len(userListString))+'s', value,userID,0x01,length,userListString)
         
     return userListResponse
     
     
 def sendDataMessage(payload):
-    global messageType,sequenceNumSend,clientID,groupID,addr_sequenceNum_ACK
+    global messageType,sequenceNumSend,userID,groupID,addr_sequenceNum_ACK
     messageType = 5
     R = 0     
     A = 0
@@ -272,7 +272,7 @@ def sendDataMessage(payload):
 
 #    payloadLength = len(pay#sequenceNumReceived =  getSequenceNumber(data)load)
 #    print("payloadLength : " + str(payloadLength))
-    dataMessage = struct.pack('>BBBHH' + str(len(payload)) + 's', value, clientID, groupID,0x0008,len(payload),payload)
+    dataMessage = struct.pack('>BBBHH' + str(len(payload)) + 's', value,userID, groupID,0x0008,len(payload),payload)
     print(dataMessage)
     
     return dataMessage
@@ -327,7 +327,7 @@ def groupCreationReject():
     return  groupCreationReject
 
 def serverTransferGroupInvitation(s,clientInvited,typeServer):
-    global sequenceNumSend,clientID,groupID,userList,groupID_private
+    global sequenceNumSend,userID,groupID,userList,groupID_private
     print(clientInvited)
     client_invited_list = []   
     print(len(clientInvited))
@@ -352,7 +352,7 @@ def serverTransferGroupInvitation(s,clientInvited,typeServer):
         ipAddress = userList[id][2]
         print("ipAddress in serverTransferGroupInvitation : " + str(ipAddress))
         groupInvitationRequest = ctypes.create_string_buffer(9)
-        struct.pack_into('>BBBHBBB', groupInvitationRequest, 0,value,clientID,0x00,0x0008,typeServer,id,groupID_private)
+        struct.pack_into('>BBBHBBB', groupInvitationRequest, 0,value,userID,0x00,0x0008,typeServer,id,groupID_private)
         s.sendto(groupInvitationRequest,ipAddress)
         print("server transfered invitation success")
         print("!!!!!!!!!!!!!!!!!!!")
@@ -380,6 +380,41 @@ def updateDisconnection(clientID_quit):
     updateDisconnection = ctypes.create_string_buffer(7)
     struct.pack_into('>BBBHB', updateDisconnection, 0,value,0x00,0xFF,0x0006,clientID_quit)  
     return updateDisconnection
+
+def retransmission(s,addr,buf,messageType_ref):
+    global messageType, sequenceNumReceived,ACK,resendTimeMax
+    resendtime = 1
+    temps_break = 1
+    time.sleep(0.2)
+    while True:
+        resendtime += 1
+        readable,writable,exceptional = select.select(inputs,[],[],0.5)
+
+        for r in readable:
+            # open the packet
+            data,addr_from = s.recvfrom(1024)
+            #print(data)
+            messageType = getType(data)
+#            print("messageType : "+ str(messageType) ) 
+            sequenceNumReceived =  getSequenceNumber(data)
+            ACK = getACK(data)
+            #jiebao,success,break
+            if (messageType_ref == messageType and ACK == 1):
+                
+                print("get response, no need to retransmission")
+                temps_break = 4
+                break
+        if temps_break >2:
+            break
+        s.sendto(buf,addr)
+        print("this is %s resendtime" %(resendtime-1))
+        print("##############################################")
+                        
+                    ## wait 5s for client to reconnecter
+        time.sleep(1)
+        if resendtime>resendTimeMax:
+            print("the last packet lost")
+            return
 
 def dataReceived(s,data,addr):
     global clientID,groupID,messageType,groupID_private,sourceID,address,userID
@@ -416,35 +451,9 @@ def dataReceived(s,data,addr):
                 s.sendto(Reject,addr)
                 
                 ###############retransmission
-#                resendtime = 0
-#                temps_break = 1
-#                while True:
-#                    resendtime += 1
-#                    readable,writable,exceptional = select.select(inputs,[],[],0.5)          
-#                    for r in readable:
-#                        # open the packet
-#                        data,addr = s.recvfrom(1024)
-#                        #print(data)
-#                        messageType = getType(data)
-#            #            print("messageType : "+ str(messageType) ) 
-#                        sequenceNumReceived =  getSequenceNumber(data)
-#                        ACK = getACK(data)
-#                        #jiebao,success,break
-#                        if(messageType == 0x02 and ACK ==1):
-#                            if(sequenceNumReceived == sequenceNumSend):
-#                                print("##############################################")
-#                                print("client has received the packet of connection reject 1")
-#                                temps_break = 4
-#                                break
-#                    if temps_break >2:
-#                        break
-#                    s.sendto(Reject,addr)
-#                    print("this is %s resendtime" %(resendtime-1))
-#                    if resendtime>resendTimeMax:
-#                        print("the last packet lost")
-#                        break
-#                if temps_break >3:
-#                    break 
+                messageType_ref = 0x02
+                retransmission(s,addr,Reject,messageType_ref)
+
                 
             else :     
 
@@ -452,89 +461,48 @@ def dataReceived(s,data,addr):
                     print("connection accept in server")
                     Accept = connectionAccept(data)
                     s.sendto(Accept,addr)
-                    
-#                    resendtime = 0
-#                    temps_break = 1
-#                    while True:
-#                        resendtime += 1
-#                        readable,writable,exceptional = select.select(inputs,[],[],0.5)          
-#                        for r in readable:
-#                            # open the packet
-#                            data,addr = s.recvfrom(1024)
-#                            #print(data)
-#                            messageType = getType(data)
-#                #            print("messageType : "+ str(messageType) ) 
-#                            sequenceNumReceived =  getSequenceNumber(data)
-#                            ACK = getACK(data)
-#                            #jiebao,success,break
-#                            if(messageType == 0x01 and ACK ==1):
-#                                if(sequenceNumReceived == sequenceNumSend):
-#                                    print("##############################################")
-#                                    print("client has received the packet of connection accept")
-#                                    temps_break = 4
-#                                    break
-#                        if temps_break >2:
-#                            break
-#                        s.sendto(Accept,addr)
-#                        print("this is %s resendtime" %(resendtime-1))
-#                        if resendtime>resendTimeMax:
-#                            print("the last packet lost")
-#                            break
-#                    if temps_break >3:
-#                        break 
+                    #####retransmission
+                    messageType_ref = 0x01
+                    retransmission(s,addr,Accept,messageType_ref)
+
     
                 else :
                     Error = 0
-                    print("uername already taken")  
+                    print("uername already used")  
                     Reject = connectionReject(data,Error)
                     s.sendto(Reject,addr)
-                    
-#                    resendtime = 0
-#                    temps_break = 1
-#                    while True:
-#                        resendtime += 1
-#                        readable,writable,exceptional = select.select(inputs,[],[],0.5)          
-#                        for r in readable:
-#                            # open the packet
-#                            data,addr = s.recvfrom(1024)
-#                            #print(data)
-#                            messageType = getType(data)
-#                #            print("messageType : "+ str(messageType) ) 
-#                            sequenceNumReceived =  getSequenceNumber(data)
-#                            ACK = getACK(data)
-#                            #jiebao,success,break
-#                            if(messageType == 0x02 and ACK ==1):
-#                                if(sequenceNumReceived == sequenceNumSend):
-#                                    print("##############################################")
-#                                    print("client has received the packet of connection reject 2")
-#                                    temps_break = 4
-#                                    break
-#                        if temps_break >2:
-#                            break
-#                        s.sendto(Reject,addr)
-#                        print("this is %s resendtime" %(resendtime-1))
-#                        if resendtime>resendTimeMax:
-#                            print("the last packet lost")
-#                            break
-##                    if temps_break >3:
-#                        break                     
-                    
-                    
+                    messageType_ref = 0x02
+                    retransmission(s,addr,Reject,messageType_ref)                    
+
+                 
         else :
             print("server is full")
+            Reject = connectionReject(data,Error)
+            s.sendto(Reject,addr)
+            
+            messageType_ref = 0x02
+            retransmission(s,addr,Reject,messageType_ref)
 
-    elif(messageType == 0x01 and ACK==1):
-        print("##############################################")
-        print("ACK in 0x01 :"  +str(ACK))
-        print("it is connection ACK from client ")
-#        sourceID = getSourceID(data)
-#        print("sourceID : "+ str(sourceID))
+#    elif(messageType == 0x01 and ACK==1):
+#        print("##############################################")
+#        print("ACK in 0x01 :"  +str(ACK))
+#        print("it is connection ACK from client ")
+##        sourceID = getSourceID(data)
+##        print("sourceID : "+ str(sourceID))
+#        
+#        
+#    elif(messageType == 0x02 and ACK==1):
+#        print("##############################################")
+#        print("ACK in 0x02 :"  +str(ACK))
+#        print("it is disconnection ACK from client ")
+##        sourceID = getSourceID(data)
+##        print("sourceID : "+ str(sourceID))   
 
 
         
       
      
-    elif (messageType == 0x03):
+    elif (messageType == 0x03 and ACK == 0):
         print("##############################################")
         print("userList Request")
 
@@ -542,7 +510,8 @@ def dataReceived(s,data,addr):
         print("userlist sended : " + str(userList))
         userListResponse = sendUserListResponse()
         s.sendto(userListResponse,addr)
-        
+        messageType_ref = 0x04
+        retransmission(s,addr,userListResponse,messageType_ref)         
         
     elif(messageType == 0x04 and ACK==1):
         print("##############################################")
@@ -564,7 +533,7 @@ def dataReceived(s,data,addr):
         respond = acknowledgement()
         s.sendto(respond,addr)
         payload = getPayload(data)
-        sequenceNumSend = (sequenceNumSend + 1)%2   
+        userID = getSourceID(data)
         dataMessage = sendDataMessage(payload)
         print("address :" +str(address))
         for i in address:
@@ -573,7 +542,17 @@ def dataReceived(s,data,addr):
                 
                 print("addr :" +str(addr))
                 print("i :" +str(i))
-                s.sendto(dataMessage,i)        
+                s.sendto(dataMessage,i)
+                time.sleep(5)
+                messageType_ref = 0x05
+                retransmission(s,addr,dataMessage,messageType_ref)
+                
+    elif (messageType == 0x05 and ACK == 1):
+        print("##############################################")
+        userID = getSourceID(data)
+        print("transfer a message sucess of client %s"%userID)
+        
+        
 ######################################    server receives a group creation request and transfer group invitation    
     elif(messageType == 0x06):
         print("##############################################")
