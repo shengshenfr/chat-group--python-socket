@@ -138,11 +138,17 @@ def getPayload(dataMessage):
 
 def getUserList(userListResponse):
     global userList,clientIDList
-    
-    userFormat = '>BBBH'+str(len(userListResponse)-5)+'s'
+    user_info = []
+    length_user = (len(userListResponse)-5)/16
+    print(length_user)
+    userFormat = '>BBBHBB8sLH'
     user = ctypes.create_string_buffer(len(userListResponse))
-    user = struct.unpack_from(userFormat, userListResponse,0)
-    print("user : "+ str(user[4]))
+    offset = 0
+    for offset in length_user : 
+        user = struct.unpack_from(userFormat, userListResponse,offset)
+        offset += 1
+        user_info.append(user)  
+    
     userList = eval(user[4])
     
     for key in userList.items():
@@ -277,8 +283,8 @@ def groupCreationRequest(ID_invited_list):
  
     return groupCreationRequest      
 
-def clientGroupInvitationRequest():
-    global sequenceNumSend,sourceID,groupID,typeServer,userID
+def clientGroupInvitationRequest(ID,group_invited):
+    global sequenceNumSend,typeServer,userID
     messageType = 9 
     R = 0     
     A = 0
@@ -291,8 +297,8 @@ def clientGroupInvitationRequest():
     typeServer = typeServer <<7
 
     groupInvitationRequest = ctypes.create_string_buffer(9)
-    struct.pack_into('>BBBHBBB', groupInvitationRequest, 0,value,sourceID,0x00,0x0008,typeServer,groupID,userID) 
-
+    struct.pack_into('>BBBHBBB', groupInvitationRequest, 0,value,userID,0x00,0x0008,typeServer,group_invited,ID) 
+    return groupInvitationRequest
     
   
 def groupInvitationAccept():
@@ -679,18 +685,18 @@ while True :
                         
                         
                 elif(messageType == 0x0E and ACK == 0):
-                    if(sequenceNumReceived == sequenceNumSend):
-                        print("##############################################")
-                        print("update userList broadcast from client")
-            #            sourceID = getClientID(data,userList)
-            #            print("clientID : "+ str(clientID))
-                        userList = getUserList(data)
-                        
-                        print("userList in 0x0E : "+ str(userList))            
-                        
-                        acknow = acknowledgement()
-                        s.sendto(acknow,addr)
-                        print("##############################################")
+                    
+                    print("##############################################")
+                    print("update userList broadcast from client")
+        #            sourceID = getClientID(data,userList)
+        #            print("clientID : "+ str(clientID))
+                    userList = getUserList(data)
+                    
+                    print("userList in 0x0E : "+ str(userList))            
+                    
+                    acknow = acknowledgement()
+                    s.sendto(acknow,addr)
+                    print("##############################################")
                 
                 elif(messageType == 0x0F and ACK == 0):
                     if(sequenceNumReceived == sequenceNumSend):
@@ -897,6 +903,22 @@ while True :
                 groupDR = groupDisjointRequest()
     
                 s.sendto(groupDR,addr)
+                
+            elif(mType == 'invite'):
+                sequenceNumSend = (sequenceNumSend + 1)%2  
+                print("i want to invite another client")
+                print("userList in main : "+str(userList))
+                print("my userID in main : "+str(userID))
+                print("pls input client you want to invite")
+                ID = raw_input()
+                ID = int(ID)
+                ################# get group private
+                group_invited = userList[userID][1]
+                groupInvitationRequest =  clientGroupInvitationRequest(ID,group_invited)
+                s.sendto(groupInvitationRequest,addr)
+    
+                
+                
                 
             else:
                 print("wait")       

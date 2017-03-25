@@ -238,29 +238,29 @@ def connectionReject(data,Error):
 
 
 def sendUserListResponse():
-    global usernameList,userList,sequenceNumReceived,userID
+    global usernameList,sequenceNumReceived,userID
     type = 4
     R = 0     
     A = 1
     value = valueControl(type,R,sequenceNumReceived,A)
     length = len(userList) + 5
-    print("usernameList : "+str(usernameList))    
+#    print("usernameList : "+str(usernameList))    
     print("userList : "+str(userList))
     userListString = str(userList)
     print("userListString : "+str(userListString))
-#    for iUser in usernameList:
-#        print("iUser:"+str(iUser))
-#        username = str(iUser)
-#        clientID = int(userList[iUser][0])
-#        print("clientID in dict : "+ str(clientID)) 
-#        groupID  = int(userList[iUser][1])
-#        print("groupID in dict : "+ str(groupID))        
-#        ipAddress = userList[iUser][2][0]
-#        port = int(userList[iUser][2][1])       
-#    userListResponse = ctypes.create_string_buffer(21)
-    userListResponse = struct.pack('>BBBH'+str(len(userListString))+'s', value,userID,0x01,length,userListString)
+    
+    buf = ctypes.create_string_buffer(16*len(userList)+5)
+    i = 0
+    for id in userList :
+        username = userList[id][0]
+        print("username :" +str(username))
+        groupID = userList[id][1]
+        ipAddr = userList[id][2][0]
+        port = userList[id][2][1]
+        struct.pack_into('>BBBHBB8sLH',buf,i,value,userID,0x01,length,id,groupID,username,ipAddr,port)
+        i = i+1
         
-    return userListResponse
+    return buf
     
     
 def sendDataMessage(payload):
@@ -508,8 +508,7 @@ def dataReceived(s,data,addr):
 
         print("clientID : "+ str(clientID))
         print("userlist sended : " + str(userList))
-        userListResponse = sendUserListResponse()
-        s.sendto(userListResponse,addr)
+        sendUserListResponse(s,addr)
         messageType_ref = 0x04
         retransmission(s,addr,userListResponse,messageType_ref)         
         
