@@ -18,7 +18,7 @@ s.connect((HOST,PORT))
 
 
 
-
+######## create the messageType of 8 bits
 def valueControl(messageType,R,S,ACK):
 #    print("R :" + str(R))
 #    print("S :" + str(S))
@@ -35,13 +35,13 @@ def valueControl(messageType,R,S,ACK):
     return int(value)  
     
 
-
+##### get the type of connection reject in the connection
 def getError(Reject):
     Error = struct.unpack('>B', Reject,6)
     e = Error>>7
     return e
  
-    
+################# get the type of message(control)     
 def getType(data):       
     premier = struct.unpack('>B', data[0])
 #    print ("Premier element : " + str(premier[0]))
@@ -50,7 +50,7 @@ def getType(data):
 #    print("messageType:"+str(messageType))
     return messageType
 
-
+################# get the username of client  
 def getUsername(data):
     username = struct.unpack_from('8s', data,6)
     print ("Voici username : " + username[0].decode('UTF-8'))
@@ -94,13 +94,13 @@ def getClientID(Accept):
 
     return clientID[0]
     
-
+##########get group ID public
 def getGroupID(data):    
     groupID = struct.unpack_from('>B', data,2)
     print("groupID : " + str(groupID[0]))
     
     return groupID[0]   
-
+################# get group ID private
 def getGroupID_private(data):
     groupID_private = struct.unpack_from('>B', data,8)
     print("groupID private: " + str(groupID_private[0]))
@@ -114,7 +114,7 @@ def getID_private(data):
     return groupID_private[0]      
 
 def getSourceID(data):
-    sourceID = struct.unpack_from('>B', data,7)
+    sourceID = struct.unpack_from('>B', data,1)
     print("sourceID: " + str(sourceID[0]))
     
     return sourceID[0]     
@@ -136,21 +136,35 @@ def getPayload(dataMessage):
     
     return payload
 
-def getUserList(userListResponse):
+def getUserList(data):
     global userList,clientIDList
-    user_info = []
-    length_user = (len(userListResponse)-5)/16
-    print(length_user)
-    userFormat = '>BBBHBB8sLH'
-    user = ctypes.create_string_buffer(len(userListResponse))
-    offset = 0
-    for offset in length_user : 
-        user = struct.unpack_from(userFormat, userListResponse,offset)
+    offset = 3
+    length_user = struct.unpack_from('>H',data,offset)[0]
+    print("length of user : "+str(length_user))
+
+    offset = 5
+    length = 0    
+    while(length < (length_user/16)) : 
+        client_ID = struct.unpack_from('>B', data,offset)[0]
+        print("client_ID : "+str(client_ID))
         offset += 1
-        user_info.append(user)  
-    
-    userList = eval(user[4])
-    
+        group_ID =  struct.unpack_from('>B', data,offset)[0]
+        print("group_ID : "+str(group_ID))
+        offset += 1
+        username =  struct.unpack_from('>8s', data,offset)[0]
+        print("username : "+str(username))
+        offset += 8
+        ipAddr = struct.unpack_from('>I', data,offset)[0]
+        print("ipAddr before : "+str(ipAddr))
+        ipAddr = socket.inet_ntoa(struct.pack('I',socket.htonl(ipAddr)))
+        print("ipAddr after: "+str(ipAddr))
+        offset += 4
+        port =  struct.unpack_from('>H', data,offset)[0]
+        print("port : "+str(port))
+        offset += 2
+        userList[client_ID] = [username,group_ID,(ipAddr,port)]
+        length += 1
+    print("getUserList : "+str(userList))    
     for key in userList.items():
         clientIDList.append(key[0])
         
@@ -158,34 +172,6 @@ def getUserList(userListResponse):
 #    print("userlist transfered from string to dict :" +str(userList))    
 #    print("clientIDList in getUserList :"+str(clientIDList))
     return userList 
-#    clientID = struct.unpack_from('B', userListResponse,5)
-#    clientID = clientID[0]    
-#    print("clientID in dict : "+ str(clientID)) 
-#    
-#    groupID = struct.unpack_from('B', userListResponse,6)
-#    groupID = groupID[0] 
-#    print("groupID in dict : "+ str(groupID))  
-#    
-#    username = struct.unpack_from('8s', userListResponse,7)
-#    username = username[0].decode('UTF-8')
-#    print("username in dict : "+ str(username))  
-    
-#    ipAddress = struct.unpack_from('L', userListResponse,9)
-#    ipAddress = ipAddress[0]
-#    print("ipAddress in dict : "+ str(ipAddress))
-#    
-#    port = struct.unpack_from('H', userListResponse,10)
-#    port = ipAddress[0]
-#    print("port in dict : "+ str(port)) 
-    
-#    userList = {}.fromkeys([username])
-##    userList[username] =  [clientID,groupID,(ipAddress,port)]    
-#    userList[username] =  [clientID,groupID]
-#    usernameList.append(username)    
-#    print("userList : "+ str(userList))  
-#    print("usernameList : "+ str(usernameList))
-        
-    
 
 def acknowledgement():
     
@@ -274,14 +260,25 @@ def groupCreationRequest(ID_invited_list):
         print("group decentralized")
         
     T = T <<7
+    print("userID who demande group creation : "+str(userID))
+    print("ID_invited_list in groupCreation request :" +str(ID_invited_list))
+    numberClient_invited = len(ID_invited_list[userID])
+    print("numberClient_invited : "+str(numberClient_invited))
+    length_packet = numberClient_invited + 6
     
-    clientInvited = str(ID_invited_list)
-    length = len(ID_invited_list) + 6
-    
+    buf = ctypes.create_string_buffer(length_packet)
+    struct.pack_into('>BBBHB',buf,0,value,userID,0x00,length_packet-6,T)
 #    groupCreationRequest = ctypes.create_string_buffer(9)
-    groupCreationRequest = struct.pack('>BBBHB'+str(len(clientInvited))+'s',value,userID,0x00,length,T,clientInvited)
- 
-    return groupCreationRequest      
+    offset = 6 
+    i = 0
+    while i< numberClient_invited :
+        user_invited = ID_invited_list[userID][i]
+        print("user_invited : "+str(user_invited))
+        struct.pack_into('>B',buf,offset,user_invited)
+        offset += 1
+        i += 1
+   
+    return buf 
 
 def clientGroupInvitationRequest(ID,group_invited):
     global sequenceNumSend,typeServer,userID
@@ -441,7 +438,7 @@ ACK = 0
 messageType = 0
 clientIDList = []
 userList = {}
-ID_invited_list = []
+ID_invited_list = {}
 groupID_private = 0
 typeServer = 1
 userID = 0
@@ -462,7 +459,7 @@ while True :
     resendtime = 0
     temps_break = 1
     ## every 6s to reconnection
-    time.sleep(5) 
+#    time.sleep(5) 
     while True:
         resendtime += 1
         readable,writable,exceptional = select.select(inputs,[],[],0.5)
@@ -740,14 +737,9 @@ while True :
                         print("sourceID in 0x11 :" +str(sourceID))
                         print(" serverTransferGroupInvitation from client %s" %sourceID)
                         print("ACK in 0x11 :"  +str(ACK))          
-                        
-    
-    #    clientID = struct.unpack_from('B', Accept,5)
-                        print("messageType in 0x11 :" + str(messageType))
-                        
-                        print("ACK in 0x11 :"  +str(ACK))          
-                        sourceID = getSourceID(data)
-                        
+   
+                        acknow = acknowledgement()
+                        s.sendto(acknow,addr)    
                         
 #                        acknow = acknowledgement()
 #                        s.sendto(acknow,addr)
@@ -784,7 +776,7 @@ while True :
                 s.sendto(userListRequest,addr)
                 messageType_ref = 0x04
                 waitTime = 3 
-                retransmission(s,addr,userListRequest,messageType_ref, waitTime)
+#                retransmission(s,addr,userListRequest,messageType_ref, waitTime)
 #                stopFlag = Event()
 #                thread = MyThread(stopFlag,s,addr,buf,sequenceNumSend)
 #                thread.start()
@@ -799,15 +791,19 @@ while True :
                 print("group creation request")
     #            print("userList in group Creation Request : "+str(userList))
                 print("who do you want to invite, pls input clientID, and end with 0")
+                ID_invited = []
                 ID = raw_input()
                 while ID != '0':    
                     ID_int = int(ID)
-                    ID_invited_list.append(ID_int)
+                    ############## stocker client who has been invited in a dict, the key is the client
+                    ######## who invited other client
+                    ID_invited.append(ID_int)
                     ID = raw_input()
-                    
+                print("ID invited in group creation request : " + str(ID_invited))    
+                ID_invited_list[userID] = ID_invited     
                 print("ID in group creation request : " + str(ID_invited_list))            
                 
-                
+ 
                 groupCreationRequest = groupCreationRequest(ID_invited_list)
                 s.sendto(groupCreationRequest,addr)
                 
